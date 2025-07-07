@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  mcp:
+    build: .
+    env_file:
+      - .env
+    ports:
+      - "8333:8000"
