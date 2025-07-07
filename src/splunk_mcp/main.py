@@ -947,4 +947,4 @@ async def delete_itsi_team(team_id: str) -> str:
         return f"Error deleting ITSI team: {e}"
 
 if __name__ == "__main__":
-    mcp_server.run()
+    mcp_server.run(transport="http")
