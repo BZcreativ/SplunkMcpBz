@@ -223,3 +223,13 @@ Note that the `roots` URI should still point to the project directory on your **
 ## Acknowledgements
 
 This project is inspired by the [splunk-mcp](https://github.com/livehybrid/splunk-mcp) project.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Support & Donations
+
+If you find this project useful, please consider supporting its development by making a donation.
+
+[Your Donation Link Here]
