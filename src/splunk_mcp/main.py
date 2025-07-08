@@ -8,6 +8,7 @@ from splunk_mcp.itsi_connector import ITSIConnector
 import json
 
 mcp_server = FastMCP("SplunkMCP")
+app = mcp_server.asgi_app()  # Create proper ASGI application instance
 
 @mcp_server.tool()
 async def search_splunk(query: str, earliest: str = "-15m", latest: str = "now", max_results: int = 1000) -> str:
