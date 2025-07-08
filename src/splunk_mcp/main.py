@@ -19,4 +19,5 @@ async def read_root():
 @mcp_server.tool()
 async def list_indexes() -> str:
     """A dummy function to test the MCP connection."""
+    # Force update
     return "['test_index1', 'test_index2']"
