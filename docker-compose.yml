@@ -5,3 +5,4 @@ services:
       - .env
     ports:
       - "8333:8000"
+    command: poetry run python src/splunk_mcp/main.py

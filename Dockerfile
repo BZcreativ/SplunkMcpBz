@@ -21,5 +21,4 @@ COPY src/ /app/src/
 # Install project dependencies
 RUN poetry config virtualenvs.create false && poetry install --without dev --no-interaction --no-ansi
 
-# Command to run the application
-CMD ["uvicorn", "splunk_mcp.main:mcp_server", "--host", "0.0.0.0", "--port", "8000"]
+# The command to run the application will be specified in the docker-compose.yml file
