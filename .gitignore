@@ -1,17 +1,6 @@
-# Python
+# Ignore environment variables
+.env
+
+# Ignore Python cache
 __pycache__/
 *.pyc
-*.pyo
-*.pyd
-.Python
-env/
-venv/
-.env
-.vscode/
-
-# Docker
-.dockerignore
-docker-compose.override.yml
-
-# Other
-.DS_Store
