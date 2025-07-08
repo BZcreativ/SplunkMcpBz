@@ -22,4 +22,4 @@ COPY src/ /app/src/
 RUN poetry config virtualenvs.create false && poetry install --without dev --no-interaction --no-ansi
 
 # Command to run the application
-CMD ["poetry", "run", "python", "src/splunk_mcp/main.py"]
+CMD ["uvicorn", "splunk_mcp.main:mcp_server.app", "--host", "0.0.0.0", "--port", "8000"]
