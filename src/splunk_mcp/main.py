@@ -1,3 +1,7 @@
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from fastmcp import FastMCP
 from splunk_mcp.splunk_connector import SplunkConnector
 from splunk_mcp.itsi_connector import ITSIConnector
