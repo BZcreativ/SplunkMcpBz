@@ -24,6 +24,7 @@ class SplunkConnector:
             return False
 
     def connect(self):
+        print(f"Attempting to connect to Splunk at {self.scheme}://{self.host}:{self.port} with username {self.username}")
         if not self.check_splunk_availability():
             print(f"Splunk server at {self.host}:{self.port} is not reachable.")
             return None
@@ -36,6 +37,7 @@ class SplunkConnector:
                 scheme=self.scheme,
                 verify=self.verify,
             )
+            print("Successfully connected to Splunk.")
             return self.service
         except Exception as e:
             print(f"Error connecting to Splunk: {e}")
