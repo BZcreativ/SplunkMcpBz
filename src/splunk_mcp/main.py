@@ -7,11 +7,14 @@ from splunk_mcp.splunk_connector import SplunkConnector
 from splunk_mcp.itsi_connector import ITSIConnector
 import json
 
-mcp_server = FastMCP("SplunkMCP")
 from fastapi import FastAPI
 
 mcp_server = FastMCP("SplunkMCP")
-app = mcp_server.http_app()  # Modern non-SSE ASGI application
+# Create a FastAPI app
+app = FastAPI()
+
+# Mount the FastMCP app as a sub-application
+app.mount("/mcp", mcp_server.http_app())
 
 # Add a simple root endpoint for testing server accessibility
 @app.get("/")
