@@ -7,18 +7,14 @@ from splunk_mcp.splunk_connector import SplunkConnector
 from splunk_mcp.itsi_connector import ITSIConnector
 import json
 
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI
 
 mcp_server = FastMCP("SplunkMCP")
 # Create a FastAPI app
 app = FastAPI()
 
-# Create an APIRouter for the FastMCP app
-mcp_router = APIRouter()
-mcp_router.mount("/", mcp_server.http_app())
-
-# Include the FastMCP router in the main FastAPI app
-app.include_router(mcp_router, prefix="/mcp")
+# Mount the FastMCP application at the /mcp path
+app.mount("/mcp", mcp_server.http_app())
 
 # Add a simple root endpoint for testing server accessibility
 @app.get("/")
