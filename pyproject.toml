@@ -9,7 +9,8 @@ packages = [{include = "splunk_mcp", from = "src"}]
 python = "^3.10"
 fastapi = "^0.111.0"
 uvicorn = {extras = ["standard"], version = "^0.29.0"}
-fastmcp = "^2.6.1"
+splunk-sdk = ">=2.0.0"
+fastmcp = "^2.10.2"
 python-multipart = "^0.0.9"
 
 [tool.poetry.group.dev.dependencies]
