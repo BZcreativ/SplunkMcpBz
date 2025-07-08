@@ -7,19 +7,8 @@ from splunk_mcp.splunk_connector import SplunkConnector
 from splunk_mcp.itsi_connector import ITSIConnector
 import json
 
-from fastapi import FastAPI
-
 mcp_server = FastMCP("SplunkMCP")
-# Create a FastAPI app
-app = FastAPI()
-
-# Mount the FastMCP app as a sub-application
-app.mount("/mcp", mcp_server.http_app())
-
-# Add a simple root endpoint for testing server accessibility
-@app.get("/")
-async def read_root():
-    return {"message": "Hello, World!"}
+app = mcp_server.app # Use the underlying Starlette app directly
 
 @mcp_server.tool()
 async def search_splunk(query: str, earliest: str = "-15m", latest: str = "now", max_results: int = 1000) -> str:
