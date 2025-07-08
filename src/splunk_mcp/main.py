@@ -950,5 +950,4 @@ async def delete_itsi_team(team_id: str) -> str:
     except Exception as e:
         return f"Error deleting ITSI team: {e}"
 
-if __name__ == "__main__":
-    mcp_server.run(transport="http")
+# Remove the direct run call when using Uvicorn
