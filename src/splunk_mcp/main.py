@@ -8,7 +8,15 @@ from splunk_mcp.itsi_connector import ITSIConnector
 import json
 
 mcp_server = FastMCP("SplunkMCP")
+from fastapi import FastAPI
+
+mcp_server = FastMCP("SplunkMCP")
 app = mcp_server.http_app()  # Modern non-SSE ASGI application
+
+# Add a simple root endpoint for testing server accessibility
+@app.get("/")
+async def read_root():
+    return {"message": "Hello, World!"}
 
 @mcp_server.tool()
 async def search_splunk(query: str, earliest: str = "-15m", latest: str = "now", max_results: int = 1000) -> str:
