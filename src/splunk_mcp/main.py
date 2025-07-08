@@ -21,9 +21,6 @@ app.mount("/mcp", mcp_server.http_app())
 async def read_root():
     return {"message": "Hello, World!"}
 
-@app.post("/mcp/")
-async def test_mcp_post():
-    return {"message": "POST request to /mcp/ received!"}
 
 @mcp_server.tool()
 async def search_splunk(query: str, earliest: str = "-15m", latest: str = "now", max_results: int = 1000) -> str:
