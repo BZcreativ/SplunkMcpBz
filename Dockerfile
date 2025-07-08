@@ -15,6 +15,9 @@ RUN pip install poetry
 # Copy the dependency files to the working directory
 COPY pyproject.toml poetry.lock ./
 
+# Copy environment file
+COPY .env ./
+
 # Copy the rest of the application code to the working directory
 COPY src/ /app/src/
 
@@ -22,4 +25,4 @@ COPY src/ /app/src/
 RUN poetry config virtualenvs.create false && poetry install --without dev --no-interaction --no-ansi
 
 # Command to run the application
-CMD ["uvicorn", "splunk_mcp.main:mcp_server.app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "splunk_mcp.main:mcp_server", "--host", "0.0.0.0", "--port", "8000"]
