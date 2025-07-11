@@ -18,8 +18,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add custom middleware to handle WebSocket connections
+@app.middleware("http")
+async def websocket_cors_middleware(request, call_next):
+    if request.url.path == "/mcp":
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "*"
+        return response
+    return await call_next(request)
+
 # Mount the FastMCP server on the FastAPI app
 mcp_server = FastMCP("SplunkMCP")
+# Mount the FastMCP server on the FastAPI app with explicit WebSocket handling
 app.mount("/mcp", mcp_server.http_app())
 
 @mcp_server.tool()
