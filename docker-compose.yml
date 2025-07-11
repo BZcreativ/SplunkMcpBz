@@ -1,9 +1,20 @@
+version: '3.8'
+
 services:
-  mcp:
+  mcp-server:
     build: .
-    env_file:
-      - .env
     ports:
       - "8333:8333"
-    volumes:
-      - ./src:/app/src
+    environment:
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8333/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge
