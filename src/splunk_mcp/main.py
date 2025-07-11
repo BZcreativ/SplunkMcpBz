@@ -37,8 +37,14 @@ class AllowAllWebSocket(WebSocketServerProtocol):
         kwargs['origins'] = None  
         super().__init__(*args, **kwargs)
 
-# Create FastMCP server with custom WebSocket class
-mcp_server = FastMCP("SplunkMCP", websocket_class=AllowAllWebSocket)
+# Create FastMCP server with minimal security for testing
+mcp_server = FastMCP(
+    "SplunkMCP",
+    websocket_class=AllowAllWebSocket,
+    allowed_origins=["*"],  # Disable origin checking
+    auth_required=False,    # Disable authentication
+    rate_limit=None         # Disable rate limiting
+)
 
 # Mount the FastMCP server on the FastAPI app
 app.mount("/mcp", mcp_server.http_app())
