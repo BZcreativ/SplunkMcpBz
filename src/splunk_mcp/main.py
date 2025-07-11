@@ -20,7 +20,6 @@ app.add_middleware(
 # Initialize FastMCP with minimal configuration
 mcp_server = FastMCP(
     "SplunkMCP",
-    auth_required=False,
     rate_limit=None
 )
 
