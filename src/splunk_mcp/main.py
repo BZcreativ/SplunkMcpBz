@@ -1,16 +1,26 @@
 import sys
 import os
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastmcp import FastMCP
 
-# Create a standalone FastMCP server with CORS enabled
-mcp_server = FastMCP(
-    "SplunkMCP",
-    cors_origins=["*"],  # Allow all origins
-    cors_methods=["*"],   # Allow all methods
-    cors_headers=["*"]    # Allow all headers
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+# Create a standard FastAPI application
+app = FastAPI()
+
+# Apply comprehensive CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
+
+# Mount the FastMCP server on the FastAPI app
+mcp_server = FastMCP("SplunkMCP")
+app.mount("/mcp", mcp_server.http_app())
 
 @mcp_server.tool()
 async def get_server_info() -> str:
@@ -44,5 +54,5 @@ async def get_job_results(job_id: str) -> list:
 # Run the server directly without FastAPI
 if __name__ == "__main__":
     import uvicorn
-    # Use FastMCP's built-in HTTP server
-    uvicorn.run(mcp_server.http_app(), host="0.0.0.0", port=8333)
+    # Run the main FastAPI application
+    uvicorn.run(app, host="0.0.0.0", port=8333)
