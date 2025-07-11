@@ -1,11 +1,31 @@
 import asyncio
 import traceback
+import socket
 from fastmcp import Client
 
+def check_port_open(host, port):
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(5)
+        result = sock.connect_ex((host, port))
+        sock.close()
+        return result == 0
+    except Exception as e:
+        print(f"Port check error: {e}")
+        return False
+
 async def main():
+    host = "192.168.1.210"
+    port = 8333
+
+    print(f"Checking if port {port} is open on {host}...")
+    if not check_port_open(host, port):
+        print(f"ERROR: Port {port} is not open!")
+        return
+
     try:
         print("Attempting to connect to server...")
-        async with Client("http://192.168.1.210:8333/", timeout=10, verify_ssl=False) as client:
+        async with Client(f"http://{host}:{port}/", timeout=15, verify_ssl=False) as client:
             print("Connected to FastMCP server successfully!")
             
             print("Calling list_indexes tool...")
