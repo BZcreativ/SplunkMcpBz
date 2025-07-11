@@ -220,6 +220,27 @@ For example, if the remote machine's IP address is `192.168.1.100`, the client c
 
 Note that the `roots` URI should still point to the project directory on your **local** machine. This allows the client to manage and display the project context correctly, even when the server is running on a remote machine.
 
+## Recent Updates
+
+### [1.0.0] - 2025-07-11
+#### Added
+- Initial FastMCP server implementation
+- Docker container support
+- Health check endpoint (/health)
+- MCP endpoint (/mcp) with basic tools:
+  - get_server_info
+  - list_indexes
+
+#### Changed
+- Simplified FastMCP initialization to use only required parameters
+- Removed obsolete version field from docker-compose.yml
+- Updated dependencies in requirements.txt
+
+#### Fixed
+- Resolved "Session terminated" connection issues
+- Fixed port allocation conflicts
+- Addressed FastMCP initialization errors
+
 ## Acknowledgements
 
 This project is inspired by the [splunk-mcp](https://github.com/livehybrid/splunk-mcp) project.
