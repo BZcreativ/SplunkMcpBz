@@ -1,0 +1,334 @@
+2025-07-11 20:28:04,078 - asyncio - DEBUG - Using proactor: IocpProactor
+2025-07-11 20:28:04,080 - MCPDiagnostics - INFO - System Diagnostics:
+2025-07-11 20:28:04,080 - MCPDiagnostics - INFO - Python Version: 3.10.18 | packaged by Anaconda, Inc. | (main, Jun  5 2025, 13:08:55) [MSC v.1929 64 bit (AMD64)]
+2025-07-11 20:28:04,168 - MCPDiagnostics - INFO - Platform: Windows-10-10.0.22631-SP0
+2025-07-11 20:28:04,169 - MCPDiagnostics - INFO - Network Hostname: bzlaps
+2025-07-11 20:28:04,171 - MCPDiagnostics - INFO - Port 8333 is open and reachable.
+2025-07-11 20:28:04,171 - MCPDiagnostics - INFO - 
+========================================
+2025-07-11 20:28:04,171 - MCPDiagnostics - INFO - Testing endpoint path: '/'
+2025-07-11 20:28:04,171 - MCPDiagnostics - INFO - Attempting connection to: http://192.168.1.210:8333/
+2025-07-11 20:28:04,171 - MCPDiagnostics - INFO - Using MCP endpoint path: /
+2025-07-11 20:28:04,172 - MCPDiagnostics - INFO - Connection Attempt 1/3
+2025-07-11 20:28:04,175 - mcp.client.streamable_http - DEBUG - Connecting to StreamableHTTP endpoint: http://192.168.1.210:8333/
+2025-07-11 20:28:04,402 - mcp.client.streamable_http - DEBUG - Sending client message: root=JSONRPCRequest(method='initialize', params={'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'mcp', 'version': '0.1.0'}}, jsonrpc='2.0', id=0)
+2025-07-11 20:28:04,403 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:04,404 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE5896F0>
+2025-07-11 20:28:04,405 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:04,405 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:04,405 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:04,405 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:04,406 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:04,406 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 404, b'Not Found', [(b'date', b'Fri, 11 Jul 2025 19:28:03 GMT'), (b'server', b'uvicorn'), (b'content-length', b'9'), (b'content-type', b'text/plain; charset=utf-8')])
+2025-07-11 20:28:04,407 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/ "HTTP/1.1 404 Not Found"
+2025-07-11 20:28:04,407 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:04,407 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:04,408 - MCPDiagnostics - ERROR - Connection Attempt 1 Failed
+2025-07-11 20:28:04,408 - MCPDiagnostics - ERROR - Error Type: <class 'RuntimeError'>
+2025-07-11 20:28:04,408 - MCPDiagnostics - ERROR - Error Details: Client failed to connect: Session terminated
+2025-07-11 20:28:06,409 - MCPDiagnostics - INFO - Connection Attempt 2/3
+2025-07-11 20:28:06,410 - mcp.client.streamable_http - DEBUG - Connecting to StreamableHTTP endpoint: http://192.168.1.210:8333/
+2025-07-11 20:28:06,605 - mcp.client.streamable_http - DEBUG - Sending client message: root=JSONRPCRequest(method='initialize', params={'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'mcp', 'version': '0.1.0'}}, jsonrpc='2.0', id=0)
+2025-07-11 20:28:06,605 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:06,607 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE58B7C0>
+2025-07-11 20:28:06,607 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:06,608 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:06,608 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:06,608 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:06,608 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:06,609 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 404, b'Not Found', [(b'date', b'Fri, 11 Jul 2025 19:28:06 GMT'), (b'server', b'uvicorn'), (b'content-length', b'9'), (b'content-type', b'text/plain; charset=utf-8')])
+2025-07-11 20:28:06,609 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/ "HTTP/1.1 404 Not Found"
+2025-07-11 20:28:06,609 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:06,610 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:06,610 - MCPDiagnostics - ERROR - Connection Attempt 2 Failed
+2025-07-11 20:28:06,610 - MCPDiagnostics - ERROR - Error Type: <class 'RuntimeError'>
+2025-07-11 20:28:06,610 - MCPDiagnostics - ERROR - Error Details: Client failed to connect: Session terminated
+2025-07-11 20:28:08,611 - MCPDiagnostics - INFO - Connection Attempt 3/3
+2025-07-11 20:28:08,611 - mcp.client.streamable_http - DEBUG - Connecting to StreamableHTTP endpoint: http://192.168.1.210:8333/
+2025-07-11 20:28:08,802 - mcp.client.streamable_http - DEBUG - Sending client message: root=JSONRPCRequest(method='initialize', params={'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'mcp', 'version': '0.1.0'}}, jsonrpc='2.0', id=0)
+2025-07-11 20:28:08,804 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:08,805 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE58B490>
+2025-07-11 20:28:08,806 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:08,806 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:08,806 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:08,806 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:08,807 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:08,809 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 404, b'Not Found', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-length', b'9'), (b'content-type', b'text/plain; charset=utf-8')])
+2025-07-11 20:28:08,810 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/ "HTTP/1.1 404 Not Found"
+2025-07-11 20:28:08,810 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:08,810 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:08,811 - MCPDiagnostics - ERROR - Connection Attempt 3 Failed
+2025-07-11 20:28:08,812 - MCPDiagnostics - ERROR - Error Type: <class 'RuntimeError'>
+2025-07-11 20:28:08,813 - MCPDiagnostics - ERROR - Error Details: Client failed to connect: Session terminated
+2025-07-11 20:28:08,813 - MCPDiagnostics - ERROR - Full Traceback:
+2025-07-11 20:28:08,815 - MCPDiagnostics - ERROR - Traceback (most recent call last):
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\fastmcp\client\client.py", line 357, in _session_runner
+    await stack.enter_async_context(self._context_manager())
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\contextlib.py", line 619, in enter_async_context
+    result = await _cm_type.__aenter__(cm)
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\contextlib.py", line 199, in __aenter__
+    return await anext(self.gen)
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\fastmcp\client\client.py", line 269, in _context_manager
+    with catch(get_catch_handlers()):
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\exceptiongroup\_catch.py", line 39, in __exit__
+    raise unhandled from exc.__cause__
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\exceptiongroup\_catch.py", line 65, in handle_exception
+    result = handler(matched)
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\fastmcp\utilities\exceptions.py", line 29, in _exception_handler
+    raise leaf
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\fastmcp\client\transports.py", line 293, in connect_session
+    yield session
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\fastmcp\client\client.py", line 277, in _context_manager
+    self._initialize_result = await self._session.initialize()
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\mcp\client\session.py", line 151, in initialize
+    result = await self.send_request(
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\mcp\shared\session.py", line 286, in send_request
+    raise McpError(response_or_error.error)
+mcp.shared.exceptions.McpError: Session terminated
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "C:\devtest\SplunkMcpBz\comprehensive_mcp_debug.py", line 53, in advanced_mcp_connection_test
+    async with Client(connection_url, timeout=20) as client:
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\fastmcp\client\client.py", line 300, in __aenter__
+    raise RuntimeError(
+RuntimeError: Client failed to connect: Session terminated
+
+2025-07-11 20:28:08,818 - MCPDiagnostics - ERROR - Endpoint path '/' failed: Client failed to connect: Session terminated
+2025-07-11 20:28:08,818 - MCPDiagnostics - ERROR - Possible causes:
+2025-07-11 20:28:08,818 - MCPDiagnostics - ERROR - - Server not configured for this endpoint
+2025-07-11 20:28:08,818 - MCPDiagnostics - ERROR - - Protocol version mismatch
+2025-07-11 20:28:08,818 - MCPDiagnostics - ERROR - - Docker container port mapping issue
+2025-07-11 20:28:08,818 - MCPDiagnostics - INFO - 
+========================================
+2025-07-11 20:28:08,818 - MCPDiagnostics - INFO - Testing endpoint path: '/mcp'
+2025-07-11 20:28:08,818 - MCPDiagnostics - INFO - Attempting connection to: http://192.168.1.210:8333/mcp
+2025-07-11 20:28:08,819 - MCPDiagnostics - INFO - Using MCP endpoint path: /mcp
+2025-07-11 20:28:08,819 - MCPDiagnostics - INFO - Connection Attempt 1/3
+2025-07-11 20:28:08,820 - mcp.client.streamable_http - DEBUG - Connecting to StreamableHTTP endpoint: http://192.168.1.210:8333/mcp
+2025-07-11 20:28:09,014 - mcp.client.streamable_http - DEBUG - Sending client message: root=JSONRPCRequest(method='initialize', params={'protocolVersion': '2025-06-18', 'capabilities': {}, 'clientInfo': {'name': 'mcp', 'version': '0.1.0'}}, jsonrpc='2.0', id=0)
+2025-07-11 20:28:09,014 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:09,016 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE5C1AB0>
+2025-07-11 20:28:09,017 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,017 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,017 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,018 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,018 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,018 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 307, b'Temporary Redirect', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-length', b'0'), (b'location', b'http://192.168.1.210:8333/mcp/')])
+2025-07-11 20:28:09,018 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp "HTTP/1.1 307 Temporary Redirect"
+2025-07-11 20:28:09,020 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,020 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-07-11 20:28:09,020 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,021 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,021 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,021 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,021 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,022 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,022 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,128 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'cache-control', b'no-cache, no-transform'), (b'connection', b'keep-alive'), (b'content-type', b'text/event-stream'), (b'mcp-session-id', b'0fe9b171e7084a1dabe0c1502447f6a0'), (b'x-accel-buffering', b'no'), (b'transfer-encoding', b'chunked')])
+2025-07-11 20:28:09,129 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp/ "HTTP/1.1 200 OK"
+2025-07-11 20:28:09,129 - mcp.client.streamable_http - INFO - Received session ID: 0fe9b171e7084a1dabe0c1502447f6a0
+2025-07-11 20:28:09,129 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,139 - mcp.client.streamable_http - DEBUG - SSE message: root=JSONRPCResponse(jsonrpc='2.0', id=0, result={'protocolVersion': '2025-06-18', 'capabilities': {'experimental': {}, 'prompts': {'listChanged': True}, 'resources': {'subscribe': False, 'listChanged': True}, 'tools': {'listChanged': True}}, 'serverInfo': {'name': 'SplunkMCP', 'version': '1.10.1'}})
+2025-07-11 20:28:09,140 - mcp.client.streamable_http - INFO - Negotiated protocol version: 2025-06-18
+2025-07-11 20:28:09,141 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,141 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,142 - mcp.client.streamable_http - DEBUG - Sending client message: root=JSONRPCNotification(method='notifications/initialized', params=None, jsonrpc='2.0')
+2025-07-11 20:28:09,142 - MCPDiagnostics - INFO - Successfully established MCP client connection.
+2025-07-11 20:28:09,142 - MCPDiagnostics - INFO - Calling diagnostic tool: list_indexes
+2025-07-11 20:28:09,143 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:09,143 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:09,145 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE5895D0>
+2025-07-11 20:28:09,145 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,146 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,146 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,147 - httpcore.http11 - DEBUG - receive_response_body.failed exception=GeneratorExit()
+2025-07-11 20:28:09,147 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,147 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,148 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE588B80>
+2025-07-11 20:28:09,148 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-07-11 20:28:09,148 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 307, b'Temporary Redirect', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-length', b'0'), (b'location', b'http://192.168.1.210:8333/mcp/')])
+2025-07-11 20:28:09,149 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp "HTTP/1.1 307 Temporary Redirect"
+2025-07-11 20:28:09,149 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,149 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-07-11 20:28:09,150 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,150 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,150 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-07-11 20:28:09,150 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,150 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-07-11 20:28:09,150 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,151 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,151 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,151 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,151 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 307, b'Temporary Redirect', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-length', b'0'), (b'location', b'http://192.168.1.210:8333/mcp/')])
+2025-07-11 20:28:09,151 - httpx - INFO - HTTP Request: GET http://192.168.1.210:8333/mcp "HTTP/1.1 307 Temporary Redirect"
+2025-07-11 20:28:09,152 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-07-11 20:28:09,152 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-07-11 20:28:09,152 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,152 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,152 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,152 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,153 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'GET']>
+2025-07-11 20:28:09,153 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,153 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'GET']>
+2025-07-11 20:28:09,154 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,154 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'GET']>
+2025-07-11 20:28:09,154 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 202, b'Accepted', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-type', b'application/json'), (b'mcp-session-id', b'0fe9b171e7084a1dabe0c1502447f6a0'), (b'content-length', b'0')])
+2025-07-11 20:28:09,154 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp/ "HTTP/1.1 202 Accepted"
+2025-07-11 20:28:09,155 - mcp.client.streamable_http - DEBUG - Received 202 Accepted
+2025-07-11 20:28:09,155 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,155 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,156 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'cache-control', b'no-cache, no-transform'), (b'connection', b'keep-alive'), (b'content-type', b'text/event-stream'), (b'mcp-session-id', b'0fe9b171e7084a1dabe0c1502447f6a0'), (b'x-accel-buffering', b'no'), (b'transfer-encoding', b'chunked')])
+2025-07-11 20:28:09,156 - httpx - INFO - HTTP Request: GET http://192.168.1.210:8333/mcp/ "HTTP/1.1 200 OK"
+2025-07-11 20:28:09,156 - mcp.client.streamable_http - DEBUG - GET SSE connection established
+2025-07-11 20:28:09,156 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'GET']>
+2025-07-11 20:28:09,157 - mcp.client.streamable_http - DEBUG - Sending client message: root=JSONRPCRequest(method='tools/call', params={'name': 'list_indexes', 'arguments': {}, '_meta': {'progressToken': 1}}, jsonrpc='2.0', id=1)
+2025-07-11 20:28:09,158 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:09,163 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE5C36D0>
+2025-07-11 20:28:09,164 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,165 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,165 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,165 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,165 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,166 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 307, b'Temporary Redirect', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-length', b'0'), (b'location', b'http://192.168.1.210:8333/mcp/')])
+2025-07-11 20:28:09,166 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp "HTTP/1.1 307 Temporary Redirect"
+2025-07-11 20:28:09,167 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,167 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-07-11 20:28:09,167 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,167 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,168 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,168 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,169 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,169 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,170 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,173 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'cache-control', b'no-cache, no-transform'), (b'connection', b'keep-alive'), (b'content-type', b'text/event-stream'), (b'mcp-session-id', b'0fe9b171e7084a1dabe0c1502447f6a0'), (b'x-accel-buffering', b'no'), (b'transfer-encoding', b'chunked')])
+2025-07-11 20:28:09,174 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp/ "HTTP/1.1 200 OK"
+2025-07-11 20:28:09,174 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,183 - mcp.client.streamable_http - DEBUG - SSE message: root=JSONRPCResponse(jsonrpc='2.0', id=1, result={'content': [{'type': 'text', 'text': "['test_index1', 'test_index2']"}], 'structuredContent': {'result': "['test_index1', 'test_index2']"}, 'isError': False})
+2025-07-11 20:28:09,184 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,184 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,185 - mcp.client.streamable_http - DEBUG - Sending client message: root=JSONRPCRequest(method='tools/list', params=None, jsonrpc='2.0', id=2)
+2025-07-11 20:28:09,186 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:09,187 - httpcore.http11 - DEBUG - receive_response_body.failed exception=GeneratorExit()
+2025-07-11 20:28:09,188 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE5C3070>
+2025-07-11 20:28:09,188 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,188 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,189 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,189 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,189 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,189 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 307, b'Temporary Redirect', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-length', b'0'), (b'location', b'http://192.168.1.210:8333/mcp/')])
+2025-07-11 20:28:09,190 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp "HTTP/1.1 307 Temporary Redirect"
+2025-07-11 20:28:09,190 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,191 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-07-11 20:28:09,191 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,191 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,192 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,193 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,193 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,193 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,193 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,195 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'cache-control', b'no-cache, no-transform'), (b'connection', b'keep-alive'), (b'content-type', b'text/event-stream'), (b'mcp-session-id', b'0fe9b171e7084a1dabe0c1502447f6a0'), (b'x-accel-buffering', b'no'), (b'transfer-encoding', b'chunked')])
+2025-07-11 20:28:09,195 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp/ "HTTP/1.1 200 OK"
+2025-07-11 20:28:09,195 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,196 - mcp.client.streamable_http - DEBUG - SSE message: root=JSONRPCResponse(jsonrpc='2.0', id=2, result={'tools': [{'name': 'list_indexes', 'description': 'A dummy function to test the MCP connection.', 'inputSchema': {'properties': {}, 'type': 'object'}, 'outputSchema': {'properties': {'result': {'title': 'Result', 'type': 'string'}}, 'required': ['result'], 'title': '_WrappedResult', 'type': 'object', 'x-fastmcp-wrap-result': True}}, {'name': 'get_server_info', 'description': 'Get basic server information.', 'inputSchema': {'properties': {}, 'type': 'object'}, 'outputSchema': {'properties': {'result': {'title': 'Result', 'type': 'string'}}, 'required': ['result'], 'title': '_WrappedResult', 'type': 'object', 'x-fastmcp-wrap-result': True}}]})
+2025-07-11 20:28:09,196 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,197 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,198 - MCPDiagnostics - INFO - List Indexes Result: ['test_index1', 'test_index2']
+2025-07-11 20:28:09,198 - MCPDiagnostics - INFO - Calling diagnostic tool: get_server_info
+2025-07-11 20:28:09,198 - mcp.client.streamable_http - DEBUG - Sending client message: root=JSONRPCRequest(method='tools/call', params={'name': 'get_server_info', 'arguments': {}, '_meta': {'progressToken': 3}}, jsonrpc='2.0', id=3)
+2025-07-11 20:28:09,199 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:09,200 - httpcore.http11 - DEBUG - receive_response_body.failed exception=GeneratorExit()
+2025-07-11 20:28:09,200 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE58AEC0>
+2025-07-11 20:28:09,201 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,201 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,201 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,201 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,201 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,202 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 307, b'Temporary Redirect', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-length', b'0'), (b'location', b'http://192.168.1.210:8333/mcp/')])
+2025-07-11 20:28:09,202 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp "HTTP/1.1 307 Temporary Redirect"
+2025-07-11 20:28:09,203 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,203 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-07-11 20:28:09,203 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,203 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,203 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,203 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,204 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,204 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,204 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,205 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'cache-control', b'no-cache, no-transform'), (b'connection', b'keep-alive'), (b'content-type', b'text/event-stream'), (b'mcp-session-id', b'0fe9b171e7084a1dabe0c1502447f6a0'), (b'x-accel-buffering', b'no'), (b'transfer-encoding', b'chunked')])
+2025-07-11 20:28:09,212 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp/ "HTTP/1.1 200 OK"
+2025-07-11 20:28:09,213 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,214 - mcp.client.streamable_http - DEBUG - SSE message: root=JSONRPCResponse(jsonrpc='2.0', id=3, result={'content': [{'type': 'text', 'text': 'SplunkMCP Server v1.0 - Standalone FastMCP Implementation'}], 'structuredContent': {'result': 'SplunkMCP Server v1.0 - Standalone FastMCP Implementation'}, 'isError': False})
+2025-07-11 20:28:09,215 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,216 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,218 - MCPDiagnostics - INFO - Get Server Info Result: SplunkMCP Server v1.0 - Standalone FastMCP Implementation
+2025-07-11 20:28:09,218 - MCPDiagnostics - INFO - Calling diagnostic tool: list_available_tools
+2025-07-11 20:28:09,218 - mcp.client.streamable_http - DEBUG - Sending client message: root=JSONRPCRequest(method='tools/call', params={'name': 'list_available_tools', 'arguments': {}, '_meta': {'progressToken': 4}}, jsonrpc='2.0', id=4)
+2025-07-11 20:28:09,219 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:09,223 - httpcore.http11 - DEBUG - receive_response_body.failed exception=GeneratorExit()
+2025-07-11 20:28:09,224 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE5C34F0>
+2025-07-11 20:28:09,224 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,225 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,225 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,226 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,226 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,227 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 307, b'Temporary Redirect', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-length', b'0'), (b'location', b'http://192.168.1.210:8333/mcp/')])
+2025-07-11 20:28:09,227 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp "HTTP/1.1 307 Temporary Redirect"
+2025-07-11 20:28:09,228 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,228 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-07-11 20:28:09,228 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,229 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,229 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,230 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,231 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,232 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,232 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'POST']>
+2025-07-11 20:28:09,234 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'cache-control', b'no-cache, no-transform'), (b'connection', b'keep-alive'), (b'content-type', b'text/event-stream'), (b'mcp-session-id', b'0fe9b171e7084a1dabe0c1502447f6a0'), (b'x-accel-buffering', b'no'), (b'transfer-encoding', b'chunked')])
+2025-07-11 20:28:09,235 - httpx - INFO - HTTP Request: POST http://192.168.1.210:8333/mcp/ "HTTP/1.1 200 OK"
+2025-07-11 20:28:09,236 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'POST']>
+2025-07-11 20:28:09,237 - mcp.client.streamable_http - DEBUG - SSE message: root=JSONRPCResponse(jsonrpc='2.0', id=4, result={'content': [{'type': 'text', 'text': 'Unknown tool: list_available_tools'}], 'isError': True})
+2025-07-11 20:28:09,238 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,238 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,239 - MCPDiagnostics - ERROR - Error calling list_available_tools tool: Unknown tool: list_available_tools
+2025-07-11 20:28:09,240 - MCPDiagnostics - ERROR - Traceback (most recent call last):
+  File "C:\devtest\SplunkMcpBz\comprehensive_mcp_debug.py", line 66, in advanced_mcp_connection_test
+    result = await client.call_tool(tool)
+  File "C:\Users\buzma\miniconda3\envs\splunkmcp\lib\site-packages\fastmcp\client\client.py", line 760, in call_tool
+    raise ToolError(msg)
+fastmcp.exceptions.ToolError: Unknown tool: list_available_tools
+
+2025-07-11 20:28:09,241 - httpcore.connection - DEBUG - connect_tcp.started host='192.168.1.210' port=8333 local_address=None timeout=20.0 socket_options=None
+2025-07-11 20:28:09,245 - httpcore.http11 - DEBUG - receive_response_body.failed exception=GeneratorExit()
+2025-07-11 20:28:09,245 - httpcore.connection - DEBUG - connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x000001B1AE589FF0>
+2025-07-11 20:28:09,246 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'DELETE']>
+2025-07-11 20:28:09,246 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,247 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'DELETE']>
+2025-07-11 20:28:09,247 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,247 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'DELETE']>
+2025-07-11 20:28:09,248 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 307, b'Temporary Redirect', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-length', b'0'), (b'location', b'http://192.168.1.210:8333/mcp/')])
+2025-07-11 20:28:09,248 - httpx - INFO - HTTP Request: DELETE http://192.168.1.210:8333/mcp "HTTP/1.1 307 Temporary Redirect"
+2025-07-11 20:28:09,249 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'DELETE']>
+2025-07-11 20:28:09,249 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-07-11 20:28:09,249 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,249 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,250 - httpcore.http11 - DEBUG - send_request_headers.started request=<Request [b'DELETE']>
+2025-07-11 20:28:09,251 - httpcore.http11 - DEBUG - send_request_headers.complete
+2025-07-11 20:28:09,251 - httpcore.http11 - DEBUG - send_request_body.started request=<Request [b'DELETE']>
+2025-07-11 20:28:09,251 - httpcore.http11 - DEBUG - send_request_body.complete
+2025-07-11 20:28:09,251 - httpcore.http11 - DEBUG - receive_response_headers.started request=<Request [b'DELETE']>
+2025-07-11 20:28:09,252 - httpcore.http11 - DEBUG - receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'date', b'Fri, 11 Jul 2025 19:28:08 GMT'), (b'server', b'uvicorn'), (b'content-type', b'application/json'), (b'mcp-session-id', b'0fe9b171e7084a1dabe0c1502447f6a0'), (b'content-length', b'0')])
+2025-07-11 20:28:09,253 - httpx - INFO - HTTP Request: DELETE http://192.168.1.210:8333/mcp/ "HTTP/1.1 200 OK"
+2025-07-11 20:28:09,253 - httpcore.http11 - DEBUG - receive_response_body.started request=<Request [b'DELETE']>
+2025-07-11 20:28:09,253 - httpcore.http11 - DEBUG - receive_response_body.complete
+2025-07-11 20:28:09,254 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,256 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,256 - httpcore.connection - DEBUG - close.started
+2025-07-11 20:28:09,256 - httpcore.http11 - DEBUG - receive_response_body.failed exception=CancelledError('Cancelled by cancel scope 1b1ae58a590')
+2025-07-11 20:28:09,256 - httpcore.http11 - DEBUG - response_closed.started
+2025-07-11 20:28:09,257 - httpcore.connection - DEBUG - close.complete
+2025-07-11 20:28:09,257 - httpcore.connection - DEBUG - close.started
+2025-07-11 20:28:09,257 - httpcore.http11 - DEBUG - response_closed.complete
+2025-07-11 20:28:09,258 - httpcore.connection - DEBUG - close.complete
+2025-07-11 20:28:09,258 - MCPDiagnostics - INFO - Successfully connected using path: '/mcp'
+2025-07-11 20:28:09,258 - MCPDiagnostics - INFO - Completed all endpoint path tests
