@@ -26,9 +26,9 @@ async def main():
         print(f"ERROR: Port {port} is not open!")
         return
 
+    print("\nAttempting FastMCP connection...")
     try:
-        print("\nAttempting FastMCP connection...")
-        async with Client(f"http://{host}:{port}/", timeout=15) as client:
+        async with Client(f"http://{host}:{port}/api/v1/mcp", timeout=30) as client:
             print("Connected to FastMCP server successfully!")
             
             print("Calling list_indexes tool...")

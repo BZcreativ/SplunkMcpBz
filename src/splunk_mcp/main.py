@@ -17,16 +17,36 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize FastMCP with minimal configuration
-mcp_server = FastMCP("SplunkMCP")
+import os
+from fastapi import HTTPException
+
+# Initialize FastMCP with memory bank configuration
+try:
+    mcp_server = FastMCP(
+        "SplunkMCP",
+        memory_bank={
+            "type": "redis",
+            "host": os.getenv("REDIS_HOST", "localhost"),
+            "port": 6379,
+            "db": 0,
+            "session_timeout": 3600,
+            "max_connections": 100
+        }
+    )
+except Exception as e:
+    logger.error(f"Failed to initialize MCP server: {str(e)}")
+    raise HTTPException(
+        status_code=500,
+        detail="Failed to initialize MCP server components"
+    )
 
 # Health check endpoint
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "mcp": "active"}
 
-# Mount MCP server
-app.mount("/mcp", mcp_server.http_app())
+# Mount MCP server with versioned path
+app.mount("/api/v1/mcp", mcp_server.http_app())
 
 # Server tools
 @mcp_server.tool()
