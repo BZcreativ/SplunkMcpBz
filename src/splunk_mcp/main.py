@@ -20,9 +20,18 @@ app.add_middleware(
 import os
 from fastapi import HTTPException
 
-# Initialize FastMCP
+# Initialize FastMCP with Redis session store
 try:
-    mcp_server = FastMCP("SplunkMCP")
+    mcp_server = FastMCP(
+        "SplunkMCP",
+        session_store={
+            "type": "redis",
+            "host": os.getenv("REDIS_HOST", "redis"),
+            "port": 6379,
+            "db": 0,
+            "session_timeout": 3600
+        }
+    )
 except Exception as e:
     logger.error(f"Failed to initialize MCP server: {str(e)}")
     raise HTTPException(
