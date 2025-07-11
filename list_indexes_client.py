@@ -5,7 +5,7 @@ from fastmcp import Client
 async def main():
     try:
         print("Attempting to connect to server...")
-        async with Client("http://192.168.1.210:8333/", timeout=10) as client:
+        async with Client("http://192.168.1.210:8333/", timeout=10, verify_ssl=False) as client:
             print("Connected to FastMCP server successfully!")
             
             print("Calling list_indexes tool...")
