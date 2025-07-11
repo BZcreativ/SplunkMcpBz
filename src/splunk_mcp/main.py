@@ -3,6 +3,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastmcp import FastMCP
+from websockets.server import WebSocketServerProtocol
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
@@ -29,9 +30,17 @@ async def websocket_cors_middleware(request, call_next):
         return response
     return await call_next(request)
 
+# Create a custom WebSocket protocol that bypasses origin validation
+class AllowAllWebSocket(WebSocketServerProtocol):
+    def __init__(self, *args, **kwargs):
+        # Bypass origin validation
+        kwargs['origins'] = None  
+        super().__init__(*args, **kwargs)
+
+# Create FastMCP server with custom WebSocket class
+mcp_server = FastMCP("SplunkMCP", websocket_class=AllowAllWebSocket)
+
 # Mount the FastMCP server on the FastAPI app
-mcp_server = FastMCP("SplunkMCP")
-# Mount the FastMCP server on the FastAPI app with explicit WebSocket handling
 app.mount("/mcp", mcp_server.http_app())
 
 @mcp_server.tool()
