@@ -1,6 +1,6 @@
 import sys
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastmcp import FastMCP
 from websockets.server import WebSocketServerProtocol
@@ -48,6 +48,14 @@ mcp_server = FastMCP(
 
 # Mount the FastMCP server on the FastAPI app
 app.mount("/mcp", mcp_server.http_app())
+
+# Add explicit WebSocket route
+@app.websocket("/mcp/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        await websocket.send_text(f"Message text was: {data}")
 
 @mcp_server.tool()
 async def get_server_info() -> str:
