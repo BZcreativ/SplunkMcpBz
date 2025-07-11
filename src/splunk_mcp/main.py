@@ -18,10 +18,7 @@ app.add_middleware(
 )
 
 # Initialize FastMCP with minimal configuration
-mcp_server = FastMCP(
-    "SplunkMCP",
-    rate_limit=None
-)
+mcp_server = FastMCP("SplunkMCP")
 
 # Health check endpoint
 @app.get("/health")
