@@ -1,19 +1,27 @@
 import asyncio
+import traceback
 from fastmcp import Client
 
 async def main():
     try:
-        async with Client("http://192.168.1.210:8333/") as client:
+        print("Attempting to connect to server...")
+        async with Client("http://192.168.1.210:8333/", timeout=10) as client:
             print("Connected to FastMCP server successfully!")
+            
+            print("Calling list_indexes tool...")
             result = await client.call_tool("list_indexes")
             print(f"Result: {result.data}")
             
-            # Test the second tool as well
+            print("Calling get_server_info tool...")
             result2 = await client.call_tool("get_server_info")
             print(f"Server Info: {result2.data}")
             
     except Exception as e:
-        print(f"Error connecting to server: {e}")
+        print(f"Detailed Error:")
+        print(f"Error Type: {type(e)}")
+        print(f"Error Message: {e}")
+        print("Full Traceback:")
+        traceback.print_exc()
 
 if __name__ == "__main__":
     asyncio.run(main())
