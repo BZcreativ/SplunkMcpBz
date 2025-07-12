@@ -4,15 +4,14 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update && \
-    apt-get install -y curl net-tools && \
+    apt-get install -y curl net-tools git && \
     rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Clone repository
+RUN git clone https://github.com/BZcreativ/SplunkMcpBz.git .
 
-# Copy application
-COPY . .
+# Install Python dependencies
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose port
 EXPOSE 8334
