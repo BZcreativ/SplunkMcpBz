@@ -17,4 +17,4 @@ RUN pip install --no-cache-dir -r requirements.txt
 EXPOSE 8334
 
 # Run with 0.0.0.0 binding
-CMD ["uvicorn", "src.splunk_mcp.main:app", "--host", "0.0.0.0", "--port", "8334", "--log-config", "none"]
+CMD ["uvicorn", "src.splunk_mcp.main:app", "--host", "0.0.0.0", "--port", "8334"]
