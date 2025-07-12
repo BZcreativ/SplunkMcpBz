@@ -118,7 +118,7 @@ Then, run the container:
 ```bash
 docker-compose up
 ```
-The server will be available at `http://localhost:8333`.
+The server will be available at `http://localhost:8334`.
 
 ### Using the MCP Client
 You can use the `fastmcp` client to interact with the server. Here is an example of how to call the `search_splunk` tool:
@@ -128,7 +128,7 @@ import asyncio
 from fastmcp import Client
 
 async def main():
-    async with Client("http://localhost:8333") as client:
+async with Client("http://localhost:8334") as client:
         result = await client.call_tool("search_splunk", {"query": "search index=_internal | head 1"})
         print(result.data)
 
@@ -142,7 +142,7 @@ This server can be used with any MCP-compliant client, such as Cline, Claude, or
 
 ### Connection Modes
 
-*   **API (HTTP)**: This is the primary mode of communication for the server. The server listens on port `8000` inside the Docker container, which is mapped to port `8333` on the host machine.
+*   **API (HTTP)**: This is the primary mode of communication for the server. The server listens on port `8000` inside the Docker container, which is mapped to port `8334` on the host machine.
 *   **SSE (Server-Sent Events)**: While `fastmcp` supports SSE, this server primarily uses the HTTP API for request/response interactions.
 *   **Stdio**: This mode is typically used for local, single-session tools and is not the primary way to interact with this server.
 
@@ -158,7 +158,7 @@ Here is an example configuration for an MCP client:
     {
       "name": "SplunkMCP",
       "protocol": "http",
-      "url": "http://localhost:8333",
+      "url": "http://localhost:8334",
       "roots": [
         {
           "uri": "file:///path/to/your/SplunkMCP",
@@ -181,7 +181,7 @@ To use this server with Cline in VS Code, you can add the server configuration t
     {
         "name": "SplunkMCP",
         "protocol": "http",
-        "url": "http://localhost:8333",
+        "url": "http://localhost:8334",
         "roots": [
             {
                 "uri": "file:///path/to/your/SplunkMCP",
@@ -206,7 +206,7 @@ For example, if the remote machine's IP address is `192.168.1.100`, the client c
     {
       "name": "SplunkMCP",
       "protocol": "http",
-      "url": "http://192.168.1.100:8333",
+      "url": "http://192.168.1.100:8334",
       "roots": [
         {
           "uri": "file:///path/to/your/SplunkMCP",
@@ -221,6 +221,10 @@ For example, if the remote machine's IP address is `192.168.1.100`, the client c
 Note that the `roots` URI should still point to the project directory on your **local** machine. This allows the client to manage and display the project context correctly, even when the server is running on a remote machine.
 
 ## Recent Updates
+
+### [1.0.1] - 2025-07-12
+#### Changed
+- Updated default port from 8333 to 8334 to resolve conflicts
 
 ### [1.0.0] - 2025-07-11
 #### Added

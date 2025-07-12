@@ -15,14 +15,27 @@ def check_port_open(host, port):
         return False
 
 async def main():
-    host = "192.168.1.210"
-    port = 8333
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--host", help="Server host:port")
+    args = parser.parse_args()
+
+    if args.host:
+        if ":" in args.host:
+            host, port = args.host.split(":")
+            port = int(port)
+        else:
+            host = args.host
+            port = 8334
+    else:
+        host = "localhost"
+        port = 8334
     
     # Configure OAuth 2.1 with PKCE
     auth_config = {
         "oauth_version": "2.1",
         "pkce_required": True,
-        "resource": f"http://{host}:{port}/api/v1/mcp"
+        "resource": f"http://{host}:{port}/mcp"
     }
 
     print(f"Network Diagnostics for {host}:{port}")
@@ -40,13 +53,13 @@ async def main():
         return
 
     print("\nServer connection details:")
-    print(f"URL: http://{host}:{port}/api/v1/mcp")
+    print(f"URL: http://{host}:{port}/mcp")
     print(f"Health endpoint: http://{host}:{port}/health")
     print(f"Timeout: 30 seconds")
 
     print("\nAttempting FastMCP connection...")
     print("Client configuration:")
-    print(f"- URL: http://{host}:{port}/api/v1/mcp")
+    print(f"- URL: http://{host}:{port}/mcp")
     print(f"- Timeout: 30 seconds")
     print(f"- Async context manager")
     
@@ -59,10 +72,10 @@ async def main():
             try:
                 print(f"Attempt {attempt + 1} of {max_retries}")
                 # Reduced timeout and added session keepalive
+                # Try connecting to root path first
                 async with Client(
-                    f"http://{host}:{port}/api/v1/mcp",
-                    timeout=15,
-                    session_keepalive=True
+                    f"http://localhost:{port}/mcp",
+                    timeout=30
                 ) as client:
                     print("Client initialized successfully")
                     print("Connected to FastMCP server successfully!")

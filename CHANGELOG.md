@@ -1,5 +1,9 @@
 # Splunk MCP Server Changelog
 
+## [1.0.1] - 2025-07-12
+### Changed
+- Updated default port from 8333 to 8334 to resolve conflicts
+
 ## [1.0.0] - 2025-07-11
 ### Added
 - Initial FastMCP server implementation
