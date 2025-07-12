@@ -21,7 +21,7 @@ import os
 from fastapi import HTTPException
 
 # Initialize FastMCP with default configuration
-try:
+htry:
     mcp_server = FastMCP("SplunkMCP")
 except Exception as e:
     logger.error(f"Failed to initialize MCP server: {str(e)}")
