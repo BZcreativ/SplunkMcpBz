@@ -1,0 +1,38 @@
+
+services:
+  redis:
+    image: redis:7.0-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - mcp-network
+
+  mcp-server:
+    build: .
+    depends_on:
+      - redis
+    ports:
+      - "8334:8334"
+    environment:
+      - PYTHONPATH=/app
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=0
+      - REDIS_PASSWORD=
+      - MCP_SESSION_TIMEOUT=3600
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8334/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mcp-network
+
+networks:
+  mcp-network:
+    driver: bridge
+
+volumes:
+  redis_data:
