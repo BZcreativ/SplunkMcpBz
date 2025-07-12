@@ -74,7 +74,7 @@ async def main():
                 # Reduced timeout and added session keepalive
                 # Try connecting to root path first
                 async with Client(
-                    f"http://localhost:{port}/mcp",
+                    f"http://{host}:{port}/mcp",
                     timeout=30
                 ) as client:
                     print("Client initialized successfully")
