@@ -4,3 +4,4 @@ fastmcp>=2.10.2
 requests>=2.28.2
 websockets>=11.0.3
 redis>=4.5.5
+splunk-sdk>=2.1.0

@@ -1,6 +1,6 @@
 print("SPLUNK MCP SERVER STARTING")  # Module-level print to verify execution
 from fastmcp import FastMCP
-from fastapi import FastAPI, Response
+from fastapi import FastAPI, Response, Request
 import logging
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -30,7 +30,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
-    allow_headers=["*"],
+    allow_headers=["*", "MCP-Protocol-Version", "Mcp-Session-Id"],
+    expose_headers=["MCP-Protocol-Version", "Mcp-Session-Id"]
 )
 
 # Mount MCP app at /mcp to avoid route conflicts
@@ -47,6 +48,23 @@ async def health_check(response: Response):
         "version": "1.0.0",
         "services": ["splunk", "redis"]
     }
+
+# MCP Standard HTTP Transport Endpoints
+@app.post("/api/mcp")
+async def handle_mcp_post(request: Request):
+    """Handle MCP JSON-RPC messages via POST"""
+    response = Response()
+    response.headers["MCP-Protocol-Version"] = "2025-06-18"
+    response.headers["Cache-Control"] = "no-cache"
+    return await mcp.http_app().handle_request(request)
+
+@app.get("/api/mcp")
+async def handle_mcp_get(request: Request):
+    """Handle MCP SSE stream via GET"""
+    response = Response()
+    response.headers["MCP-Protocol-Version"] = "2025-06-18"
+    response.headers["Cache-Control"] = "no-cache"
+    return await mcp.http_app().handle_request(request)
 
 if __name__ == "__main__":
     import uvicorn
