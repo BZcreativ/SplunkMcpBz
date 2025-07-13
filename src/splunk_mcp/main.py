@@ -234,8 +234,8 @@ async def test_splunk_connection(response: Response):
             }
         }
 
-# Include MCP routes
-app.include_router(mcp.http_app().router, prefix="/mcp")
+# Include MCP routes directly
+app.include_router(mcp.http_app().router)
 
 # Add middleware after routes are set up
 app.add_middleware(
