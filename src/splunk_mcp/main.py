@@ -158,13 +158,24 @@ root_app.mount("/api", api_app)
 mcp_app = mcp.http_app()
 root_app.mount("/mcp", mcp_app)
 
-# Add explicit route handler that forwards requests to MCP app
+# Add explicit route handler that forwards MCP requests
 @root_app.api_route("/mcp/{path:path}", methods=["GET", "POST"])
 async def handle_mcp_requests(request: Request, path: str):
-    # Forward the request to the MCP app
+    # Forward the request to the MCP app with proper path handling
     scope = dict(request.scope)
     scope["path"] = f"/{path}" if path else "/"
-    return await mcp_app(scope, request.receive)
+    scope["raw_path"] = scope["path"].encode()
+    if request.method == "POST":
+        body = await request.body()
+        return await mcp_app(
+            scope,
+            {
+                "type": "http.request",
+                "body": body,
+                "more_body": False
+            }
+        )
+    return await mcp_app(scope, {"type": "http.request"})
 
 # --- Main Execution ---
 if __name__ == "__main__":
