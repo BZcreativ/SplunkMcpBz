@@ -185,9 +185,8 @@ async def search_splunk(query: str, index: str = "*", earliest: str = "-24h", la
         logger.error(f"Unexpected search error: {str(e)}")
         raise SplunkQueryError("Search failed") from e
 
-# Create single FastAPI app with MCP lifespan
-mcp_app = mcp.http_app(path='/mcp')
-app = FastAPI(lifespan=mcp_app.lifespan)
+# Create FastAPI app and include MCP routes
+app = FastAPI(lifespan=mcp.http_app().lifespan)
 
 # Add our custom routes first
 @app.get("/api/metrics")
@@ -235,8 +234,8 @@ async def test_splunk_connection(response: Response):
             }
         }
 
-# Mount MCP app routes
-app.include_router(mcp_app.router)
+# Include MCP routes
+app.include_router(mcp.http_app().router, prefix="/mcp")
 
 # Add middleware after routes are set up
 app.add_middleware(
