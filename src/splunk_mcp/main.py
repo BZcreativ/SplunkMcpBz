@@ -2,6 +2,7 @@ print("SPLUNK MCP SERVER STARTING")  # Module-level print to verify execution
 from fastmcp import FastMCP
 from fastapi import FastAPI, Response, Request
 import logging
+import os
 from fastapi.middleware.cors import CORSMiddleware
 
 # Custom exceptions
