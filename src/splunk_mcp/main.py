@@ -251,24 +251,18 @@ logger.info("MCP routes mounted at /mcp")
 @app.post("/mcp")
 async def handle_mcp_post(request: Request):
     """Handle MCP JSON-RPC messages via POST"""
-    async def send_wrapper(message, send):
-        if message["type"] == "http.response.start":
-            message["headers"].append((b"MCP-Protocol-Version", b"2025-06-18"))
-            message["headers"].append((b"Cache-Control", b"no-cache"))
-        return await send(message)
-    
-    return await mcp.http_app()(request.scope, request.receive, lambda msg: send_wrapper(msg, request._send))
+    response = await mcp.http_app()(request.scope, request.receive, request._send)
+    response.headers["MCP-Protocol-Version"] = "2025-06-18"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 @app.get("/mcp")
 async def handle_mcp_get(request: Request):
     """Handle MCP SSE stream via GET"""
-    async def send_wrapper(message, send):
-        if message["type"] == "http.response.start":
-            message["headers"].append((b"MCP-Protocol-Version", b"2025-06-18"))
-            message["headers"].append((b"Cache-Control", b"no-cache"))
-        return await send(message)
-    
-    return await mcp.http_app()(request.scope, request.receive, lambda msg: send_wrapper(msg, request._send))
+    response = await mcp.http_app()(request.scope, request.receive, request._send)
+    response.headers["MCP-Protocol-Version"] = "2025-06-18"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 if __name__ == "__main__":
     import uvicorn
