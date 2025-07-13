@@ -209,8 +209,8 @@ async def handle_mcp_requests(request: Request, path: str):
         )
     )
 
-# Mount MCP router under /mcp path
-root_app.mount("/mcp", mcp_router)
+# Mount MCP router with proper path handling
+root_app.include_router(mcp_router, prefix="/mcp")
 
 # --- Main Execution ---
 if __name__ == "__main__":
