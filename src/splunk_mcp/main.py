@@ -198,6 +198,33 @@ async def health_check(response: Response):
         "services": ["splunk", "redis"]
     }
 
+@app.get("/api/test-splunk-connection")
+async def test_splunk_connection(response: Response):
+    """Test Splunk connection with current token"""
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Connection"] = "keep-alive"
+    try:
+        service = get_splunk_service()
+        return {
+            "status": "success",
+            "message": "Successfully connected to Splunk",
+            "info": {
+                "host": service.host,
+                "port": service.port,
+                "username": service.username
+            }
+        }
+    except SplunkConnectionError as e:
+        logger.error(f"Splunk connection test failed: {str(e)}")
+        return {
+            "status": "error",
+            "message": str(e),
+            "details": {
+                "host": os.getenv("SPLUNK_HOST", "localhost"),
+                "port": os.getenv("SPLUNK_PORT", "8089")
+            }
+        }
+
 # Then add middleware
 app.add_middleware(
     CORSMiddleware,
