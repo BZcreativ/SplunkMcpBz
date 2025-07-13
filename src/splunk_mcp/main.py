@@ -151,8 +151,17 @@ async def add_protocol_headers(request: Request, call_next):
     return response
 
 # Mount the sub-applications
-root_app.mount("/api", FastAPI(routes=api_router.routes))
-root_app.mount("/mcp", mcp.http_app())
+api_app = FastAPI(routes=api_router.routes)
+root_app.mount("/api", api_app)
+
+# Mount MCP app with explicit path handling
+mcp_app = mcp.http_app()
+@mcp_app.middleware("http")
+async def mcp_path_middleware(request: Request, call_next):
+    if request.url.path == "/":
+        request.scope["path"] = "/mcp_health_check"
+    return await call_next(request)
+root_app.mount("/mcp", mcp_app)
 
 # --- Main Execution ---
 if __name__ == "__main__":
