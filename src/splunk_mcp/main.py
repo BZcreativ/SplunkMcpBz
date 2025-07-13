@@ -98,7 +98,123 @@ async def list_indexes() -> list:
         return [idx.name for idx in indexes] if indexes else []
     except Exception as e:
         logger.error(f"Error listing indexes: {e}")
-        raise SplunkQueryError("Failed to list indexes") from e
+        raise SplunkQueryError("Failed to list indexes")
+
+@mcp.tool()
+async def splunk_search(
+    query: str,
+    earliest_time: str = "-24h",
+    latest_time: str = "now",
+    output_mode: str = "json"
+) -> dict:
+    """Execute a Splunk search query and return results"""
+    from .search_helper import execute_splunk_search
+    try:
+        return await execute_splunk_search(
+            query,
+            earliest_time=earliest_time,
+            latest_time=latest_time,
+            output_mode=output_mode
+        )
+    except SplunkQueryError as e:
+        logger.error(f"Splunk search failed for query '{query}': {e}")
+        raise
+
+@mcp.tool()
+async def get_itsi_services(service_name: Optional[str] = None) -> list:
+    """Get ITSI services"""
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_services(service_name)
+    except Exception as e:
+        logger.error(f"Error getting ITSI services: {e}")
+        raise SplunkQueryError("Failed to get ITSI services")
+
+@mcp.tool()
+async def get_itsi_service_health(service_name: str) -> dict:
+    """Get health status for a specific ITSI service"""
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_service_health(service_name)
+    except Exception as e:
+        logger.error(f"Error getting ITSI service health: {e}")
+        raise SplunkQueryError("Failed to get ITSI service health")
+
+@mcp.tool()
+async def get_itsi_kpis(service_name: Optional[str] = None) -> list:
+    """Get ITSI KPIs"""
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_kpis(service_name)
+    except Exception as e:
+        logger.error(f"Error getting ITSI KPIs: {e}")
+        raise SplunkQueryError("Failed to get ITSI KPIs")
+
+@mcp.tool()
+async def get_itsi_alerts(service_name: Optional[str] = None) -> list:
+    """Get ITSI alerts"""
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_alerts(service_name)
+    except Exception as e:
+        logger.error(f"Error getting ITSI alerts: {e}")
+        raise SplunkQueryError("Failed to get ITSI alerts")
+
+@mcp.tool()
+async def get_itsi_entities(service_name: Optional[str] = None) -> list:
+    """Get ITSI service entities"""
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_service_entities(service_name)
+    except Exception as e:
+        logger.error(f"Error getting ITSI entities: {e}")
+        raise SplunkQueryError("Failed to get ITSI entities")
+
+@mcp.tool()
+async def get_itsi_entity_types() -> list:
+    """Get ITSI entity types"""
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_entity_types()
+    except Exception as e:
+        logger.error(f"Error getting ITSI entity types: {e}")
+        raise SplunkQueryError("Failed to get ITSI entity types")
+
+@mcp.tool()
+async def get_itsi_glass_tables() -> list:
+    """Get ITSI glass tables"""
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_glass_tables()
+    except Exception as e:
+        logger.error(f"Error getting ITSI glass tables: {e}")
+        raise SplunkQueryError("Failed to get ITSI glass tables")
+
+@mcp.tool()
+async def get_itsi_service_analytics(service_name: str, time_range: str = "-24h") -> dict:
+    """Get analytics for an ITSI service"""
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_service_analytics(service_name, time_range)
+    except Exception as e:
+        logger.error(f"Error getting ITSI service analytics: {e}")
+        raise SplunkQueryError("Failed to get ITSI service analytics")
 
 # --- API Application ---
 api_router = APIRouter()
