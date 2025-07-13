@@ -42,7 +42,8 @@ def get_splunk_service(max_retries: int = 3):
             token = os.getenv("SPLUNK_TOKEN")
             
             logger.debug(f"Attempting Splunk connection to {scheme}://{host}:{port}")
-            logger.debug(f"Using token: {'*****' if token else 'NOT SET'}")
+            # Token is always masked in logs for security
+            logger.debug("Using token: *****")
             
             service = client.connect(
                 host=host,
@@ -200,27 +201,8 @@ app = FastAPI(lifespan=combined_lifespan)
 # Create dedicated MCP app
 mcp_app = mcp.http_app()
 
-from starlette.types import ASGIApp, Scope, Receive, Send
-
-class MountMCPMiddleware:
-    def __init__(self, app: ASGIApp, mcp_app: ASGIApp) -> None:
-        self.app = app
-        self.mcp_app = mcp_app
-
-    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
-        if scope["type"] == "http" and scope["path"].startswith("/mcp"):
-            # Create a new scope with adjusted path
-            new_scope = dict(scope)
-            new_scope["path"] = scope["path"][4:] or "/"
-            new_scope["root_path"] = "/mcp"
-            
-            # Forward to MCP app
-            await self.mcp_app(new_scope, receive, send)
-        else:
-            await self.app(scope, receive, send)
-
-# Create the final ASGI application
-final_app = MountMCPMiddleware(app, mcp_app)
+# Mount the MCP application at the /mcp path
+app.mount("/mcp", mcp_app)
 
 # Add our custom routes
 @app.get("/api/metrics")
@@ -289,7 +271,7 @@ async def add_protocol_headers(request: Request, call_next):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        final_app,  # Use the mounted app
+        app,  # Run the main app
         host="0.0.0.0",
         port=8334,
         timeout_keep_alive=60,
