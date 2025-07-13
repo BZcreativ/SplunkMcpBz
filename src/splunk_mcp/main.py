@@ -185,10 +185,19 @@ async def search_splunk(query: str, index: str = "*", earliest: str = "-24h", la
         logger.error(f"Unexpected search error: {str(e)}")
         raise SplunkQueryError("Search failed") from e
 
-# Create main app
-app = FastAPI()
+from contextlib import asynccontextmanager
 
-# Create dedicated MCP app with its own lifespan
+@asynccontextmanager
+async def combined_lifespan(app: FastAPI):
+    # Initialize MCP lifespan
+    async with mcp.http_app().router.lifespan_context(mcp.http_app()):
+        # Yield control to the application
+        yield
+
+# Create main app with combined lifespan
+app = FastAPI(lifespan=combined_lifespan)
+
+# Create dedicated MCP app
 mcp_app = mcp.http_app()
 
 # Middleware to mount MCP app at /mcp
@@ -279,16 +288,6 @@ async def add_protocol_headers(request: Request, call_next):
     response.headers["Cache-Control"] = "no-cache"
     return response
 
-# Add MCP lifespan context to the main app
-@app.on_event("startup")
-async def startup_event():
-    # Initialize MCP lifespan
-    await mcp_app.router.lifespan.startup()
-    
-@app.on_event("shutdown")
-async def shutdown_event():
-    # Clean up MCP lifespan
-    await mcp_app.router.lifespan.shutdown()
 
 if __name__ == "__main__":
     import uvicorn
