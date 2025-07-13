@@ -186,9 +186,28 @@ async def handle_mcp_requests(request: Request, path: str):
             }
         return {"type": "http.request"}
     
-    response = Response()
-    await mcp.http_app()(scope, receive, response.send)
-    return response
+    # Handle ASGI response
+    response_headers = []
+    response_body = b""
+    
+    async def send(message):
+        nonlocal response_headers, response_body
+        if message["type"] == "http.response.start":
+            response_headers = message["headers"]
+        elif message["type"] == "http.response.body":
+            response_body += message.get("body", b"")
+    
+    await mcp.http_app()(scope, receive, send)
+    
+    return Response(
+        content=response_body,
+        status_code=200,
+        headers=dict(
+            (k.decode(), v.decode()) 
+            for k, v in response_headers
+            if k != b"content-length"
+        )
+    )
 
 # Mount MCP router under /mcp path
 root_app.mount("/mcp", mcp_router)
