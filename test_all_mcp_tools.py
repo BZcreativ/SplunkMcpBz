@@ -17,7 +17,7 @@ async def test_mcp_tools():
     
     try:
         async with Client(
-            f"http://{host}:{port}/mcp",
+            f"http://{host}:{port}/api/mcp",
             timeout=30
         ) as client:
             print("Connected to MCP server")

@@ -154,20 +154,31 @@ async def add_protocol_headers(request: Request, call_next):
 api_app = FastAPI(routes=api_router.routes)
 root_app.mount("/api", api_app)
 
-# Mount MCP app without prefix
-mcp_app = mcp.http_app()
-root_app.mount("/mcp", mcp_app)
+# Create dedicated MCP router
+mcp_router = APIRouter()
 
-# Add explicit route handler that forwards MCP requests
-@root_app.api_route("/mcp/{path:path}", methods=["GET", "POST"])
+@mcp_router.api_route("/{path:path}", methods=["GET", "POST"])
 async def handle_mcp_requests(request: Request, path: str):
-    # Forward the request to the MCP app with proper path handling
-    scope = dict(request.scope)
-    scope["path"] = f"/{path}" if path else "/"
-    scope["raw_path"] = scope["path"].encode()
+    # Create proper ASGI scope for MCP
+    scope = {
+        "type": "http",
+        "method": request.method,
+        "path": f"/{path}" if path else "/",
+        "raw_path": f"/{path}".encode() if path else b"/",
+        "query_string": request.url.query.encode(),
+        "headers": [(k.lower().encode(), v.encode()) for k, v in request.headers.items()],
+        "client": request.client,
+        "server": request.url.hostname,
+        "scheme": request.url.scheme,
+        "root_path": "",
+        "app": root_app,
+        "state": {}
+    }
+    
+    # Forward request to MCP app
     if request.method == "POST":
         body = await request.body()
-        return await mcp_app(
+        return await mcp.http_app()(
             scope,
             {
                 "type": "http.request",
@@ -175,7 +186,10 @@ async def handle_mcp_requests(request: Request, path: str):
                 "more_body": False
             }
         )
-    return await mcp_app(scope, {"type": "http.request"})
+    return await mcp.http_app()(scope, {"type": "http.request"})
+
+# Mount MCP router under /mcp path
+root_app.mount("/mcp", mcp_router)
 
 # --- Main Execution ---
 if __name__ == "__main__":
