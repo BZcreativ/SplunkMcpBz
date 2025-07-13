@@ -24,6 +24,24 @@ logger.info("MCP initialized")
 async def mcp_health_check() -> dict:
     return {"status": "ok", "services": ["splunk", "redis"]}
 
+@mcp.tool()
+async def list_indexes() -> list:
+    """List all Splunk indexes"""
+    import splunklib.client as client
+    import os
+    
+    try:
+        service = client.connect(
+            host=os.getenv("SPLUNK_HOST", "localhost"),
+            port=int(os.getenv("SPLUNK_PORT", "8089")),
+            splunkToken=os.getenv("SPLUNK_TOKEN"),
+            scheme=os.getenv("SPLUNK_SCHEME", "https")
+        )
+        return [idx.name for idx in service.indexes]
+    except Exception as e:
+        logger.error(f"Failed to list indexes: {str(e)}")
+        raise
+
 # Create main app with CORS and proper headers
 app = FastAPI()
 app.add_middleware(
@@ -36,7 +54,8 @@ app.add_middleware(
 
 # Mount MCP app at /mcp to avoid route conflicts
 app.mount("/mcp", mcp.http_app())
-logger.info("MCP routes mounted at /mcp")
+app.mount("/mcp/", mcp.http_app())  # Handle trailing slash
+logger.info("MCP routes mounted at /mcp and /mcp/")
 
 # Add explicit health endpoint with SSE support
 @app.get("/api/health")
@@ -53,18 +72,24 @@ async def health_check(response: Response):
 @app.post("/api/mcp")
 async def handle_mcp_post(request: Request):
     """Handle MCP JSON-RPC messages via POST"""
-    response = Response()
-    response.headers["MCP-Protocol-Version"] = "2025-06-18"
-    response.headers["Cache-Control"] = "no-cache"
-    return await mcp.http_app().handle_request(request)
+    async def send_wrapper(message, send):
+        if message["type"] == "http.response.start":
+            message["headers"].append((b"MCP-Protocol-Version", b"2025-06-18"))
+            message["headers"].append((b"Cache-Control", b"no-cache"))
+        return await send(message)
+    
+    return await mcp.http_app()(request.scope, request.receive, lambda msg: send_wrapper(msg, request._send))
 
 @app.get("/api/mcp")
 async def handle_mcp_get(request: Request):
     """Handle MCP SSE stream via GET"""
-    response = Response()
-    response.headers["MCP-Protocol-Version"] = "2025-06-18"
-    response.headers["Cache-Control"] = "no-cache"
-    return await mcp.http_app().handle_request(request)
+    async def send_wrapper(message, send):
+        if message["type"] == "http.response.start":
+            message["headers"].append((b"MCP-Protocol-Version", b"2025-06-18"))
+            message["headers"].append((b"Cache-Control", b"no-cache"))
+        return await send(message)
+    
+    return await mcp.http_app()(request.scope, request.receive, lambda msg: send_wrapper(msg, request._send))
 
 if __name__ == "__main__":
     import uvicorn

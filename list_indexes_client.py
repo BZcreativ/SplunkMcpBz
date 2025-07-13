@@ -31,15 +31,9 @@ async def main():
         host = "localhost"
         port = 8334
     
-    # Configure OAuth 2.1 with PKCE
-    auth_config = {
-        "oauth_version": "2.1",
-        "pkce_required": True,
-        "resource": f"http://{host}:{port}/mcp"
-    }
-
+    # Configure basic authentication
     print(f"Network Diagnostics for {host}:{port}")
-    print(f"Using OAuth 2.1 with PKCE for authentication")
+    print(f"Using Splunk token authentication")
     
     # Check port availability
     print("\nChecking port availability...")
@@ -74,7 +68,7 @@ async def main():
                 # Reduced timeout and added session keepalive
                 # Try connecting to root path first
                 async with Client(
-                    f"http://{host}:{port}/mcp",
+                    f"http://{host}:{port}/api/mcp",
                     timeout=30
                 ) as client:
                     print("Client initialized successfully")
