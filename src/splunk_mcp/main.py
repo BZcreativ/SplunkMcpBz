@@ -175,18 +175,20 @@ async def handle_mcp_requests(request: Request, path: str):
         "state": {}
     }
     
-    # Forward request to MCP app
-    if request.method == "POST":
-        body = await request.body()
-        return await mcp.http_app()(
-            scope,
-            {
+    # Forward request to MCP app with proper ASGI call
+    async def receive():
+        if request.method == "POST":
+            body = await request.body()
+            return {
                 "type": "http.request",
                 "body": body,
                 "more_body": False
             }
-        )
-    return await mcp.http_app()(scope, {"type": "http.request"})
+        return {"type": "http.request"}
+    
+    response = Response()
+    await mcp.http_app()(scope, receive, response.send)
+    return response
 
 # Mount MCP router under /mcp path
 root_app.mount("/mcp", mcp_router)
