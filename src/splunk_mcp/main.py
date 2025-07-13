@@ -106,9 +106,9 @@ class SplunkMetrics:
 
 metrics = SplunkMetrics()
 
-# Initialize MCP with explicit base path
-mcp = FastMCP("SplunkMCP", base_path="/mcp")
-logger.info("MCP initialized with base path /mcp")
+# Initialize MCP with basic configuration
+mcp = FastMCP("SplunkMCP")
+logger.info("MCP initialized")
 
 @mcp.tool()
 async def mcp_health_check() -> dict:
