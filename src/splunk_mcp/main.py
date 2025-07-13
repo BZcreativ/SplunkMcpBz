@@ -185,11 +185,36 @@ async def search_splunk(query: str, index: str = "*", earliest: str = "-24h", la
         logger.error(f"Unexpected search error: {str(e)}")
         raise SplunkQueryError("Search failed") from e
 
-# Create FastAPI app with MCP lifespan
-app = FastAPI(lifespan=mcp.http_app().lifespan)
+# Create main app
+app = FastAPI()
 
-# Include MCP router with /mcp/ prefix
-app.include_router(mcp.http_app().router, prefix="/mcp")
+# Create dedicated MCP app with its own lifespan
+mcp_app = mcp.http_app()
+
+# Middleware to mount MCP app at /mcp
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.types import ASGIApp, Scope, Receive, Send
+
+class MountMCPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        if request.url.path.startswith("/mcp"):
+            # Adjust the path for the MCP app
+            scope = request.scope
+            new_path = scope["path"][4:]  # remove "/mcp" prefix
+            if not new_path:
+                new_path = "/"
+                
+            # Create a new scope with the adjusted path
+            new_scope = dict(scope)
+            new_scope["path"] = new_path
+            new_scope["root_path"] = "/mcp"
+            
+            # Forward the request to the MCP app
+            return await mcp_app(new_scope, request.receive, request.send)
+        return await call_next(request)
+
+# Add middleware to mount MCP app
+app.add_middleware(MountMCPMiddleware)
 
 # Add our custom routes
 @app.get("/api/metrics")
@@ -253,6 +278,17 @@ async def add_protocol_headers(request: Request, call_next):
     response.headers["MCP-Protocol-Version"] = "2025-06-18"
     response.headers["Cache-Control"] = "no-cache"
     return response
+
+# Add MCP lifespan context to the main app
+@app.on_event("startup")
+async def startup_event():
+    # Initialize MCP lifespan
+    await mcp_app.router.lifespan.startup()
+    
+@app.on_event("shutdown")
+async def shutdown_event():
+    # Clean up MCP lifespan
+    await mcp_app.router.lifespan.shutdown()
 
 if __name__ == "__main__":
     import uvicorn
