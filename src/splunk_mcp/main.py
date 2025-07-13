@@ -3,6 +3,7 @@ from fastmcp import FastMCP
 from fastapi import FastAPI, Response, Request, APIRouter
 import logging
 import os
+from typing import Optional
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
