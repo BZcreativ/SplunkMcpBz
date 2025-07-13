@@ -200,30 +200,27 @@ app = FastAPI(lifespan=combined_lifespan)
 # Create dedicated MCP app
 mcp_app = mcp.http_app()
 
-# Middleware to mount MCP app at /mcp
-from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp, Scope, Receive, Send
 
-class MountMCPMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request, call_next):
-        if request.url.path.startswith("/mcp"):
-            # Adjust the path for the MCP app
-            scope = request.scope
-            new_path = scope["path"][4:]  # remove "/mcp" prefix
-            if not new_path:
-                new_path = "/"
-                
-            # Create a new scope with the adjusted path
+class MountMCPMiddleware:
+    def __init__(self, app: ASGIApp, mcp_app: ASGIApp) -> None:
+        self.app = app
+        self.mcp_app = mcp_app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "http" and scope["path"].startswith("/mcp"):
+            # Create a new scope with adjusted path
             new_scope = dict(scope)
-            new_scope["path"] = new_path
+            new_scope["path"] = scope["path"][4:] or "/"
             new_scope["root_path"] = "/mcp"
             
-            # Forward the request to the MCP app
-            return await mcp_app(new_scope, request.receive, request.send)
-        return await call_next(request)
+            # Forward to MCP app
+            await self.mcp_app(new_scope, receive, send)
+        else:
+            await self.app(scope, receive, send)
 
-# Add middleware to mount MCP app
-app.add_middleware(MountMCPMiddleware)
+# Create the final ASGI application
+final_app = MountMCPMiddleware(app, mcp_app)
 
 # Add our custom routes
 @app.get("/api/metrics")
@@ -292,7 +289,7 @@ async def add_protocol_headers(request: Request, call_next):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        app,
+        final_app,  # Use the mounted app
         host="0.0.0.0",
         port=8334,
         timeout_keep_alive=60,
