@@ -260,7 +260,8 @@ async def handle_mcp_post(request: Request):
         }
     )
     try:
-        return await mcp.http_app()(request.scope, request.receive, request._send)
+        # Forward to FastMCP's router directly
+        return await mcp.router(request.scope, request.receive, request._send)
     except Exception as e:
         logger.error(f"MCP POST handler error: {str(e)}")
         response.status_code = 500
@@ -278,7 +279,8 @@ async def handle_mcp_get(request: Request):
         }
     )
     try:
-        return await mcp.http_app()(request.scope, request.receive, request._send)
+        # Forward to FastMCP's router directly
+        return await mcp.router(request.scope, request.receive, request._send)
     except Exception as e:
         logger.error(f"MCP GET handler error: {str(e)}")
         response.status_code = 500
