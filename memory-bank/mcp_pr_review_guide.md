@@ -1,6 +1,6 @@
 # GitHub PR Review Process for MCP Development using Cline
 
-## Step&nbsp;1 – Gather PR Information
+## Step 1 – Gather PR Information
 
 ```bash
 # Get PR details
@@ -16,7 +16,7 @@ gh pr view <PR-number> --json files
 gh pr checks <PR-number>
 ```
 
-## Step&nbsp;2 – Review the Code with Cline
+## Step 2 – Review the Code with Cline
 
 ```xml
 <!-- Read specific files to understand changes -->
@@ -32,7 +32,7 @@ gh pr checks <PR-number>
 </search_files>
 ```
 
-## Step&nbsp;3 – Ask for a Decision
+## Step 3 – Ask for a Decision
 
 ```xml
 <ask_followup_question>
@@ -49,13 +49,13 @@ Here is my assessment:
 Would you like me to proceed with this recommendation?</question>
 <options>[
 "Yes, approve the PR",
-"Yes, request changes",
+"Yes, request changes", 
 "No, I'd like to discuss further"
 ]</options>
 </ask_followup_question>
 ```
 
-## Step&nbsp;4 – Offer to Draft a Comment
+## Step 4 – Offer to Draft a Comment
 
 ```xml
 <ask_followup_question>
@@ -67,7 +67,7 @@ Would you like me to proceed with this recommendation?</question>
 </ask_followup_question>
 ```
 
-## Step&nbsp;5 – Execute the Review Decision
+## Step 5 – Execute the Review Decision
 
 ### Approvals
 
