@@ -142,9 +142,18 @@ This server can be used with any MCP-compliant client, such as Cline, Claude, or
 
 ### Connection Modes
 
-*   **API (HTTP)**: This is the primary mode of communication for the server. The server listens on port `8000` inside the Docker container, which is mapped to port `8334` on the host machine.
-*   **SSE (Server-Sent Events)**: While `fastmcp` supports SSE, this server primarily uses the HTTP API for request/response interactions.
-*   **Stdio**: This mode is typically used for local, single-session tools and is not the primary way to interact with this server.
+*   **API (HTTP)**: Primary communication mode with dual endpoints:
+  - `/mcp`: Standard MCP endpoint
+  - `/sse`: Server-Sent Events endpoint
+  The server listens on port `8000` inside Docker (mapped to `8334` on host)
+*   **SSE (Server-Sent Events)**: Enhanced with keep-alive and protocol version headers
+*   **Stdio**: For local, single-session tools (not primary interaction mode)
+*   **Remote Server Connection**:
+  ```
+  ssh root@192.168.1.210
+  su toto
+  cd /home/toto/bzmcp/SplunkMcpBz
+  ```
 
 ### Configuring a Client
 

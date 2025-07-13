@@ -4,6 +4,15 @@ from fastapi import FastAPI, Response, Request
 import logging
 from fastapi.middleware.cors import CORSMiddleware
 
+# Custom exceptions
+class SplunkConnectionError(Exception):
+    """Raised when connection to Splunk fails"""
+    pass
+
+class SplunkQueryError(Exception):
+    """Raised when a Splunk query fails"""
+    pass
+
 # Initialize logging first
 print("Initializing logging configuration")  # Will show in container logs
 logging.basicConfig(
@@ -16,6 +25,78 @@ logging.basicConfig(
 logger = logging.getLogger('mcp.protocol')
 logger.info("Logger successfully initialized")
 
+def get_splunk_service(max_retries: int = 3):
+    """Get Splunk service connection with retry logic"""
+    import splunklib.client as client
+    import os
+    import time
+    
+    last_error = None
+    for attempt in range(max_retries):
+        metrics.increment_connection_attempts()
+        try:
+            service = client.connect(
+                host=os.getenv("SPLUNK_HOST", "localhost"),
+                port=int(os.getenv("SPLUNK_PORT", "8089")),
+                splunkToken=os.getenv("SPLUNK_TOKEN"),
+                scheme=os.getenv("SPLUNK_SCHEME", "https")
+            )
+            metrics.increment_connection_successes()
+            return service
+        except Exception as e:
+            last_error = e
+            metrics.increment_connection_failures()
+            logger.warning(f"Splunk connection attempt {attempt + 1} failed: {str(e)}")
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)  # Exponential backoff
+    raise SplunkConnectionError(f"Failed to connect to Splunk after {max_retries} attempts: {str(last_error)}")
+
+# Monitoring metrics
+class SplunkMetrics:
+    def __init__(self):
+        self.connection_attempts = 0
+        self.connection_successes = 0
+        self.connection_failures = 0
+        self.query_count = 0
+        self.query_errors = 0
+        self.query_timeouts = 0
+
+    def increment_connection_attempts(self):
+        self.connection_attempts += 1
+
+    def increment_connection_successes(self):
+        self.connection_successes += 1
+
+    def increment_connection_failures(self):
+        self.connection_failures += 1
+
+    def increment_query_count(self):
+        self.query_count += 1
+
+    def increment_query_errors(self):
+        self.query_errors += 1
+
+    def increment_query_timeouts(self):
+        self.query_timeouts += 1
+
+    def get_metrics(self):
+        return {
+            "connections": {
+                "attempts": self.connection_attempts,
+                "successes": self.connection_successes,
+                "failures": self.connection_failures,
+                "success_rate": self.connection_successes / max(1, self.connection_attempts)
+            },
+            "queries": {
+                "count": self.query_count,
+                "errors": self.query_errors,
+                "timeouts": self.query_timeouts,
+                "error_rate": self.query_errors / max(1, self.query_count)
+            }
+        }
+
+metrics = SplunkMetrics()
+
 # Initialize MCP with basic configuration
 mcp = FastMCP("SplunkMCP")
 logger.info("MCP initialized")
@@ -27,37 +108,86 @@ async def mcp_health_check() -> dict:
 @mcp.tool()
 async def list_indexes() -> list:
     """List all Splunk indexes"""
-    import splunklib.client as client
-    import os
-    
     try:
-        service = client.connect(
-            host=os.getenv("SPLUNK_HOST", "localhost"),
-            port=int(os.getenv("SPLUNK_PORT", "8089")),
-            splunkToken=os.getenv("SPLUNK_TOKEN"),
-            scheme=os.getenv("SPLUNK_SCHEME", "https")
-        )
-        return [idx.name for idx in service.indexes]
-    except Exception as e:
-        logger.error(f"Failed to list indexes: {str(e)}")
+        service = get_splunk_service()
+        indexes = service.indexes
+        if not indexes:
+            logger.warning("No indexes found in Splunk")
+            return []
+        return [idx.name for idx in indexes]
+    except SplunkConnectionError as e:
+        logger.error(f"Connection error: {str(e)}")
         raise
+    except Exception as e:
+        logger.error(f"Unexpected error listing indexes: {str(e)}")
+        raise SplunkQueryError("Failed to list indexes") from e
+
+@mcp.tool()
+async def search_splunk(query: str, index: str = "*", earliest: str = "-24h", latest: str = "now") -> dict:
+    """Search Splunk data using SPL query"""
+    metrics.increment_query_count()
+    try:
+        service = get_splunk_service()
+        
+        if not query.strip():
+            metrics.increment_query_errors()
+            raise SplunkQueryError("Empty query provided")
+            
+        kwargs = {
+            "search_mode": "normal",
+            "earliest_time": earliest,
+            "latest_time": latest,
+            "index": index
+        }
+        
+        search_query = f"search {query}"
+        job = service.jobs.create(search_query, **kwargs)
+        
+        # Wait for completion with timeout
+        timeout = 30  # seconds
+        start_time = time.time()
+        while not job.is_done():
+            if time.time() - start_time > timeout:
+                metrics.increment_query_timeouts()
+                job.cancel()
+                raise SplunkQueryError(f"Query timed out after {timeout} seconds")
+            job.refresh()
+            await asyncio.sleep(0.5)
+            
+        results = list(job.results())
+        if not results:
+            return {"status": "completed", "message": "No results found"}
+            
+        return {
+            "results": [dict(r) for r in results],
+            "summary": job["content"]["messages"],
+            "status": job["content"]["dispatchState"]
+        }
+    except SplunkConnectionError as e:
+        metrics.increment_query_errors()
+        logger.error(f"Connection error: {str(e)}")
+        raise
+    except SplunkQueryError as e:
+        metrics.increment_query_errors()
+        logger.error(f"Query error: {str(e)}")
+        raise
+    except Exception as e:
+        metrics.increment_query_errors()
+        logger.error(f"Unexpected search error: {str(e)}")
+        raise SplunkQueryError("Search failed") from e
 
 # Create main app with CORS and proper headers
 app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*", "MCP-Protocol-Version", "Mcp-Session-Id"],
-    expose_headers=["MCP-Protocol-Version", "Mcp-Session-Id"]
-)
 
-# Mount MCP app at /mcp to avoid route conflicts
-app.mount("/mcp", mcp.http_app())
-app.mount("/mcp/", mcp.http_app())  # Handle trailing slash
-logger.info("MCP routes mounted at /mcp and /mcp/")
+# Add API routes first
+@app.get("/api/metrics")
+async def get_metrics(response: Response):
+    """Get current server metrics"""
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Connection"] = "keep-alive"
+    response.headers["MCP-Protocol-Version"] = "2025-06-18"
+    return metrics.get_metrics()
 
-# Add explicit health endpoint with SSE support
 @app.get("/api/health")
 async def health_check(response: Response):
     response.headers["Cache-Control"] = "no-cache"
@@ -67,6 +197,20 @@ async def health_check(response: Response):
         "version": "1.0.0",
         "services": ["splunk", "redis"]
     }
+
+# Then add middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*", "MCP-Protocol-Version", "Mcp-Session-Id"],
+    expose_headers=["MCP-Protocol-Version", "Mcp-Session-Id"]
+)
+
+# Finally mount MCP app
+app.mount("/mcp", mcp.http_app())
+app.mount("/mcp/", mcp.http_app())  # Handle trailing slash
+logger.info("MCP routes mounted at /mcp and /mcp/")
 
 # MCP Standard HTTP Transport Endpoints
 @app.post("/api/mcp")

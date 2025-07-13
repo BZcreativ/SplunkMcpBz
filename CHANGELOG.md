@@ -1,5 +1,16 @@
 # Splunk MCP Server Changelog
 
+## [Unreleased]
+### Added
+- Dual transport endpoints (/mcp and /sse)
+- Keep-alive and protocol version headers
+- Improved connection management
+- Remote server connection documentation
+
+### Changed
+- Updated CORS headers to include MCP-Protocol-Version
+- Enhanced error handling for transport layer
+
 ## [1.0.1] - 2025-07-12
 ### Changed
 - Updated default port from 8333 to 8334 to resolve conflicts
