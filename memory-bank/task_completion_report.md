@@ -23,3 +23,4 @@ cd SplunkMcpBz && python -m pytest test_splunk_search.py -v
 1. Integrate with main MCP server
 2. Add additional search parameters if needed
 3. Monitor performance in production
+ 

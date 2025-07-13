@@ -1,64 +1,55 @@
-import unittest
+import pytest
 from unittest.mock import patch, MagicMock
-from src.splunk_mcp.main import mcp, SplunkQueryError
-from fastmcp.server.lowlevel.server import ToolCallRequest
+from src.splunk_mcp.search_helper import execute_splunk_search
+from src.splunk_mcp.main import SplunkQueryError
 
-class TestSplunkSearch(unittest.TestCase):
-    def setUp(self):
-        self.tool = next(t for t in mcp.tools.values() if t.name == "splunk_search")
+def test_successful_search():
+    with patch('src.splunk_mcp.search_helper.get_splunk_service') as mock_service:
+        # Create mock results that can be both iterated and accessed as dict
+        class MockResults:
+            def __init__(self, data):
+                self.data = data
+                self.scanCount = 2
+                self.resultCount = 2
+            
+            def __iter__(self):
+                return iter(self.data)
+            
+            def __getitem__(self, key):
+                return getattr(self, key)
 
-    @patch('src.splunk_mcp.main.get_splunk_service')
-    async def test_successful_search(self, mock_service):
-        # Setup mock
-        mock_job = MagicMock()
-        mock_job.oneshot.return_value = [
+        mock_results = MockResults([
             {"_raw": "test event 1", "_time": "2025-07-13T12:00:00"},
             {"_raw": "test event 2", "_time": "2025-07-13T12:01:00"}
-        ]
-        mock_job.oneshot.__getitem__.side_effect = lambda k: {
-            "scanCount": 2,
-            "resultCount": 2
-        }[k]
-        mock_service.return_value.jobs.oneshot.return_value = mock_job
+        ])
 
-        # Test
-        request = ToolCallRequest(
-            tool_name="splunk_search",
-            arguments={"query": "test query"}
-        )
-        result = await self.tool.execute(request)
-        self.assertEqual(len(result["results"]), 2)
-        self.assertEqual(result["metadata"]["scan_count"], 2)
+        # Setup mock service chain
+        mock_service.return_value.jobs.oneshot.return_value = mock_results
 
-    @patch('src.splunk_mcp.main.get_splunk_service')
-    async def test_failed_search(self, mock_service):
+        result = execute_splunk_search("test query")
+        print(f"Mock service calls: {mock_service.mock_calls}")  # Debug
+        print(f"Test results: {result}")  # Debug
+        assert len(result["results"]) == 2
+        assert result["metadata"]["scan_count"] == 2
+
+def test_failed_search():
+    with patch('src.splunk_mcp.search_helper.get_splunk_service') as mock_service:
         mock_service.return_value.jobs.oneshot.side_effect = Exception("Search failed")
         
-        request = ToolCallRequest(
-            tool_name="splunk_search",
-            arguments={"query": "invalid query"}
-        )
-        with self.assertRaises(SplunkQueryError):
-            await self.tool.execute(request)
+        with pytest.raises(SplunkQueryError):
+            execute_splunk_search("invalid query")
 
-    @patch('src.splunk_mcp.main.get_splunk_service')
-    async def test_time_parameters(self, mock_service):
+def test_time_parameters():
+    with patch('src.splunk_mcp.search_helper.get_splunk_service') as mock_service:
         mock_job = MagicMock()
         mock_job.oneshot.return_value = []
         mock_service.return_value.jobs.oneshot.return_value = mock_job
 
-        request = ToolCallRequest(
-            tool_name="splunk_search",
-            arguments={
-                "query": "test",
-                "earliest_time": "-1h",
-                "latest_time": "now"
-            }
+        execute_splunk_search(
+            "test",
+            earliest_time="-1h",
+            latest_time="now"
         )
-        await self.tool.execute(request)
         mock_service.return_value.jobs.oneshot.assert_called_with(
             "test", earliest_time="-1h", latest_time="now", output_mode="json"
         )
-
-if __name__ == "__main__":
-    unittest.main()
