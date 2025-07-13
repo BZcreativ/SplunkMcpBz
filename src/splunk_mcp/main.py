@@ -243,10 +243,9 @@ app.add_middleware(
     expose_headers=["MCP-Protocol-Version", "Mcp-Session-Id"]
 )
 
-# Finally mount MCP app
-app.mount("/mcp", mcp.http_app())
-app.mount("/mcp/", mcp.http_app())  # Handle trailing slash
-logger.info("MCP routes mounted at /mcp and /mcp/")
+# Mount MCP app with proper route handling
+app.include_router(mcp.http_app().router, prefix="/mcp")
+logger.info("MCP routes mounted at /mcp")
 
 # MCP Standard HTTP Transport Endpoints
 @app.post("/api/mcp")
