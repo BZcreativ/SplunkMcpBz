@@ -234,8 +234,8 @@ async def test_splunk_connection(response: Response):
             }
         }
 
-# Mount the MCP application at /mcp
-app.mount("/mcp", mcp.http_app())
+# Mount the MCP application at /mcp/ with trailing slash
+app.mount("/mcp/", mcp.http_app())
 
 # Add middleware after routes are set up
 app.add_middleware(
