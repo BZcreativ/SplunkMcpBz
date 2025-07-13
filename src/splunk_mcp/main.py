@@ -1,9 +1,10 @@
 print("SPLUNK MCP SERVER STARTING")  # Module-level print to verify execution
 from fastmcp import FastMCP
-from fastapi import FastAPI, Response, Request
+from fastapi import FastAPI, Response, Request, APIRouter
 import logging
 import os
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
 
 # Custom exceptions
 class SplunkConnectionError(Exception):
@@ -15,53 +16,16 @@ class SplunkQueryError(Exception):
     pass
 
 # Initialize logging first
-print("Initializing logging configuration")  # Will show in container logs
+print("Initializing logging configuration")
 logging.basicConfig(
     level=logging.DEBUG,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler()  # Start with just console logging
-    ]
+    handlers=[logging.StreamHandler()]
 )
 logger = logging.getLogger('mcp.protocol')
 logger.info("Logger successfully initialized")
 
-def get_splunk_service(max_retries: int = 3):
-    """Get Splunk service connection with retry logic"""
-    import splunklib.client as client
-    import os
-    import time
-    
-    last_error = None
-    for attempt in range(max_retries):
-        metrics.increment_connection_attempts()
-        try:
-            host = os.getenv("SPLUNK_HOST", "localhost")
-            port = int(os.getenv("SPLUNK_PORT", "8089"))
-            scheme = os.getenv("SPLUNK_SCHEME", "https")
-            token = os.getenv("SPLUNK_TOKEN")
-            
-            logger.debug(f"Attempting Splunk connection to {scheme}://{host}:{port}")
-            # Token is always masked in logs for security
-            logger.debug("Using token: *****")
-            
-            service = client.connect(
-                host=host,
-                port=port,
-                splunkToken=token,
-                scheme=scheme
-            )
-            metrics.increment_connection_successes()
-            return service
-        except Exception as e:
-            last_error = e
-            metrics.increment_connection_failures()
-            logger.warning(f"Splunk connection attempt {attempt + 1} failed: {str(e)}")
-            if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)  # Exponential backoff
-    raise SplunkConnectionError(f"Failed to connect to Splunk after {max_retries} attempts: {str(last_error)}")
-
-# Monitoring metrics
+# --- Monitoring Metrics ---
 class SplunkMetrics:
     def __init__(self):
         self.connection_attempts = 0
@@ -71,23 +35,12 @@ class SplunkMetrics:
         self.query_errors = 0
         self.query_timeouts = 0
 
-    def increment_connection_attempts(self):
-        self.connection_attempts += 1
-
-    def increment_connection_successes(self):
-        self.connection_successes += 1
-
-    def increment_connection_failures(self):
-        self.connection_failures += 1
-
-    def increment_query_count(self):
-        self.query_count += 1
-
-    def increment_query_errors(self):
-        self.query_errors += 1
-
-    def increment_query_timeouts(self):
-        self.query_timeouts += 1
+    def increment_connection_attempts(self): self.connection_attempts += 1
+    def increment_connection_successes(self): self.connection_successes += 1
+    def increment_connection_failures(self): self.connection_failures += 1
+    def increment_query_count(self): self.query_count += 1
+    def increment_query_errors(self): self.query_errors += 1
+    def increment_query_timeouts(self): self.query_timeouts += 1
 
     def get_metrics(self):
         return {
@@ -107,7 +60,30 @@ class SplunkMetrics:
 
 metrics = SplunkMetrics()
 
-# Initialize MCP with basic configuration
+# --- Splunk Service ---
+def get_splunk_service(max_retries: int = 3):
+    import splunklib.client as client
+    import time
+    last_error = None
+    for attempt in range(max_retries):
+        metrics.increment_connection_attempts()
+        try:
+            host, port, scheme, token = (os.getenv("SPLUNK_HOST", "localhost"), int(os.getenv("SPLUNK_PORT", "8089")),
+                                         os.getenv("SPLUNK_SCHEME", "https"), os.getenv("SPLUNK_TOKEN"))
+            logger.debug(f"Attempting Splunk connection to {scheme}://{host}:{port}")
+            logger.debug("Using token: *****")
+            service = client.connect(host=host, port=port, splunkToken=token, scheme=scheme)
+            metrics.increment_connection_successes()
+            return service
+        except Exception as e:
+            last_error = e
+            metrics.increment_connection_failures()
+            logger.warning(f"Splunk connection attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)
+    raise SplunkConnectionError(f"Failed to connect to Splunk after {max_retries} attempts: {last_error}")
+
+# --- MCP Application ---
 mcp = FastMCP("SplunkMCP")
 logger.info("MCP initialized")
 
@@ -117,141 +93,49 @@ async def mcp_health_check() -> dict:
 
 @mcp.tool()
 async def list_indexes() -> list:
-    """List all Splunk indexes"""
     try:
-        service = get_splunk_service()
-        indexes = service.indexes
-        if not indexes:
-            logger.warning("No indexes found in Splunk")
-            return []
-        return [idx.name for idx in indexes]
-    except SplunkConnectionError as e:
-        logger.error(f"Connection error: {str(e)}")
-        raise
+        indexes = get_splunk_service().indexes
+        return [idx.name for idx in indexes] if indexes else []
     except Exception as e:
-        logger.error(f"Unexpected error listing indexes: {str(e)}")
+        logger.error(f"Error listing indexes: {e}")
         raise SplunkQueryError("Failed to list indexes") from e
 
-@mcp.tool()
-async def search_splunk(query: str, index: str = "*", earliest: str = "-24h", latest: str = "now") -> dict:
-    """Search Splunk data using SPL query"""
-    metrics.increment_query_count()
-    try:
-        service = get_splunk_service()
-        
-        if not query.strip():
-            metrics.increment_query_errors()
-            raise SplunkQueryError("Empty query provided")
-            
-        kwargs = {
-            "search_mode": "normal",
-            "earliest_time": earliest,
-            "latest_time": latest,
-            "index": index
-        }
-        
-        search_query = f"search {query}"
-        job = service.jobs.create(search_query, **kwargs)
-        
-        # Wait for completion with timeout
-        timeout = 30  # seconds
-        start_time = time.time()
-        while not job.is_done():
-            if time.time() - start_time > timeout:
-                metrics.increment_query_timeouts()
-                job.cancel()
-                raise SplunkQueryError(f"Query timed out after {timeout} seconds")
-            job.refresh()
-            await asyncio.sleep(0.5)
-            
-        results = list(job.results())
-        if not results:
-            return {"status": "completed", "message": "No results found"}
-            
-        return {
-            "results": [dict(r) for r in results],
-            "summary": job["content"]["messages"],
-            "status": job["content"]["dispatchState"]
-        }
-    except SplunkConnectionError as e:
-        metrics.increment_query_errors()
-        logger.error(f"Connection error: {str(e)}")
-        raise
-    except SplunkQueryError as e:
-        metrics.increment_query_errors()
-        logger.error(f"Query error: {str(e)}")
-        raise
-    except Exception as e:
-        metrics.increment_query_errors()
-        logger.error(f"Unexpected search error: {str(e)}")
-        raise SplunkQueryError("Search failed") from e
+# --- API Application ---
+api_router = APIRouter()
 
-from contextlib import asynccontextmanager
-
-@asynccontextmanager
-async def combined_lifespan(app: FastAPI):
-    # Initialize MCP lifespan
-    async with mcp.http_app().router.lifespan_context(mcp.http_app()):
-        # Yield control to the application
-        yield
-
-# Create main app with combined lifespan
-app = FastAPI(lifespan=combined_lifespan)
-
-# Create dedicated MCP app
-mcp_app = mcp.http_app()
-
-# Mount the MCP application at the /mcp path
-app.mount("/mcp", mcp_app)
-
-# Add our custom routes
-@app.get("/api/metrics")
-async def get_metrics(response: Response):
-    """Get current server metrics"""
-    response.headers["Cache-Control"] = "no-cache"
-    response.headers["Connection"] = "keep-alive"
-    response.headers["MCP-Protocol-Version"] = "2025-06-18"
+@api_router.get("/metrics")
+async def get_metrics_endpoint():
     return metrics.get_metrics()
 
-@app.get("/api/health")
-async def health_check(response: Response):
-    response.headers["Cache-Control"] = "no-cache"
-    response.headers["Connection"] = "keep-alive"
-    return {
-        "status": "ok", 
-        "version": "1.0.0",
-        "services": ["splunk", "redis"]
-    }
+@api_router.get("/health")
+async def health_check_endpoint():
+    return {"status": "ok", "version": "1.0.0", "services": ["splunk", "redis"]}
 
-@app.get("/api/test-splunk-connection")
-async def test_splunk_connection(response: Response):
-    """Test Splunk connection with current token"""
-    response.headers["Cache-Control"] = "no-cache"
-    response.headers["Connection"] = "keep-alive"
+@api_router.get("/test-splunk-connection")
+async def test_splunk_connection_endpoint():
     try:
         service = get_splunk_service()
-        return {
-            "status": "success",
-            "message": "Successfully connected to Splunk",
-            "info": {
-                "host": service.host,
-                "port": service.port,
-                "username": service.username
-            }
-        }
+        return {"status": "success", "message": "Successfully connected to Splunk",
+                "info": {"host": service.host, "port": service.port, "username": service.username}}
     except SplunkConnectionError as e:
-        logger.error(f"Splunk connection test failed: {str(e)}")
-        return {
-            "status": "error",
-            "message": str(e),
-            "details": {
-                "host": os.getenv("SPLUNK_HOST", "localhost"),
-                "port": os.getenv("SPLUNK_PORT", "8089")
-            }
-        }
+        logger.error(f"Splunk connection test failed: {e}")
+        return {"status": "error", "message": str(e),
+                "details": {"host": os.getenv("SPLUNK_HOST"), "port": os.getenv("SPLUNK_PORT")}}
 
-# Add middleware after routes are set up
-app.add_middleware(
+# --- Lifespan Management ---
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("Application lifespan startup")
+    # FastMCP's lifespan manages its own resources
+    async with mcp.http_app().router.lifespan_context(mcp.http_app()):
+        yield
+    logger.info("Application lifespan shutdown")
+
+# --- Root Application Assembly ---
+root_app = FastAPI(lifespan=lifespan)
+
+# Apply middleware to the root app
+root_app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["*"],
@@ -259,21 +143,24 @@ app.add_middleware(
     expose_headers=["MCP-Protocol-Version", "Mcp-Session-Id"]
 )
 
-# Add protocol headers middleware
-@app.middleware("http")
+@root_app.middleware("http")
 async def add_protocol_headers(request: Request, call_next):
     response = await call_next(request)
-    response.headers["MCP-Protocol-Version"] = "2025-06-18"
+    response.headers["MCP-Protocol-Version"] = "2025-07-13"
     response.headers["Cache-Control"] = "no-cache"
     return response
 
+# Mount the sub-applications
+root_app.mount("/api", FastAPI(routes=api_router.routes))
+root_app.mount("/mcp", mcp.http_app())
 
+# --- Main Execution ---
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
-        app,  # Run the main app
+        root_app,
         host="0.0.0.0",
         port=8334,
         timeout_keep_alive=60,
-        log_config=None  # Use our existing logging config
+        log_config=None
     )
