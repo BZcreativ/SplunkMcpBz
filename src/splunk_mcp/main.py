@@ -36,11 +36,19 @@ def get_splunk_service(max_retries: int = 3):
     for attempt in range(max_retries):
         metrics.increment_connection_attempts()
         try:
+            host = os.getenv("SPLUNK_HOST", "localhost")
+            port = int(os.getenv("SPLUNK_PORT", "8089"))
+            scheme = os.getenv("SPLUNK_SCHEME", "https")
+            token = os.getenv("SPLUNK_TOKEN")
+            
+            logger.debug(f"Attempting Splunk connection to {scheme}://{host}:{port}")
+            logger.debug(f"Using token: {'*****' if token else 'NOT SET'}")
+            
             service = client.connect(
-                host=os.getenv("SPLUNK_HOST", "localhost"),
-                port=int(os.getenv("SPLUNK_PORT", "8089")),
-                splunkToken=os.getenv("SPLUNK_TOKEN"),
-                scheme=os.getenv("SPLUNK_SCHEME", "https")
+                host=host,
+                port=port,
+                splunkToken=token,
+                scheme=scheme
             )
             metrics.increment_connection_successes()
             return service
