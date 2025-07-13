@@ -251,40 +251,58 @@ logger.info("MCP routes mounted at /mcp")
 @app.post("/mcp")
 async def handle_mcp_post(request: Request):
     """Handle MCP JSON-RPC messages via POST"""
-    response = Response(
-        content="",
-        media_type="application/json",
-        headers={
-            "MCP-Protocol-Version": "2025-06-18",
-            "Cache-Control": "no-cache"
-        }
-    )
     try:
-        # Forward to FastMCP's router directly
-        return await mcp.router(request.scope, request.receive, request._send)
+        # Get the response from FastMCP
+        mcp_response = await mcp.http_app()(request.scope, request.receive, request._send)
+        
+        # Ensure we have a response object
+        if mcp_response is None:
+            raise ValueError("MCP returned None response")
+            
+        # Set required headers
+        mcp_response.headers["MCP-Protocol-Version"] = "2025-06-18"
+        mcp_response.headers["Cache-Control"] = "no-cache"
+        return mcp_response
+        
     except Exception as e:
         logger.error(f"MCP POST handler error: {str(e)}")
-        response.status_code = 500
-        return response
+        return Response(
+            content=f"{{'error': '{str(e)}'}}",
+            media_type="application/json",
+            status_code=500,
+            headers={
+                "MCP-Protocol-Version": "2025-06-18",
+                "Cache-Control": "no-cache"
+            }
+        )
 
 @app.get("/mcp")
 async def handle_mcp_get(request: Request):
     """Handle MCP SSE stream via GET"""
-    response = Response(
-        content="",
-        media_type="text/event-stream",
-        headers={
-            "MCP-Protocol-Version": "2025-06-18", 
-            "Cache-Control": "no-cache"
-        }
-    )
     try:
-        # Forward to FastMCP's router directly
-        return await mcp.router(request.scope, request.receive, request._send)
+        # Get the response from FastMCP
+        mcp_response = await mcp.http_app()(request.scope, request.receive, request._send)
+        
+        # Ensure we have a response object
+        if mcp_response is None:
+            raise ValueError("MCP returned None response")
+            
+        # Set required headers
+        mcp_response.headers["MCP-Protocol-Version"] = "2025-06-18"
+        mcp_response.headers["Cache-Control"] = "no-cache"
+        return mcp_response
+        
     except Exception as e:
         logger.error(f"MCP GET handler error: {str(e)}")
-        response.status_code = 500
-        return response
+        return Response(
+            content=f"{{'error': '{str(e)}'}}",
+            media_type="text/event-stream",
+            status_code=500,
+            headers={
+                "MCP-Protocol-Version": "2025-06-18",
+                "Cache-Control": "no-cache"
+            }
+        )
 
 if __name__ == "__main__":
     import uvicorn
