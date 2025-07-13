@@ -248,61 +248,64 @@ app.include_router(mcp.http_app().router, prefix="/mcp")
 logger.info("MCP routes mounted at /mcp")
 
 # MCP Standard HTTP Transport Endpoints
+async def handle_mcp_asgi(scope, receive, send):
+    """Custom ASGI handler for MCP protocol"""
+    try:
+        # Send response headers first
+        await send({
+            'type': 'http.response.start',
+            'status': 200,
+            'headers': [
+                (b'MCP-Protocol-Version', b'2025-06-18'),
+                (b'Cache-Control', b'no-cache'),
+                (b'Content-Type', b'application/json'),
+            ]
+        })
+        
+        # Process the request body
+        body = b''
+        more_body = True
+        while more_body:
+            message = await receive()
+            body += message.get('body', b'')
+            more_body = message.get('more_body', False)
+            
+        # Process with FastMCP
+        result = await mcp.process_request(body.decode())
+        
+        # Send response body
+        await send({
+            'type': 'http.response.body',
+            'body': result.encode(),
+            'more_body': False
+        })
+        
+    except Exception as e:
+        logger.error(f"MCP ASGI handler error: {str(e)}")
+        await send({
+            'type': 'http.response.start',
+            'status': 500,
+            'headers': [
+                (b'MCP-Protocol-Version', b'2025-06-18'),
+                (b'Cache-Control', b'no-cache'),
+                (b'Content-Type', b'application/json'),
+            ]
+        })
+        await send({
+            'type': 'http.response.body',
+            'body': f'{{"error": "{str(e)}"}}'.encode(),
+            'more_body': False
+        })
+
 @app.post("/mcp")
 async def handle_mcp_post(request: Request):
     """Handle MCP JSON-RPC messages via POST"""
-    try:
-        # Get the response from FastMCP
-        mcp_response = await mcp.http_app()(request.scope, request.receive, request._send)
-        
-        # Ensure we have a response object
-        if mcp_response is None:
-            raise ValueError("MCP returned None response")
-            
-        # Set required headers
-        mcp_response.headers["MCP-Protocol-Version"] = "2025-06-18"
-        mcp_response.headers["Cache-Control"] = "no-cache"
-        return mcp_response
-        
-    except Exception as e:
-        logger.error(f"MCP POST handler error: {str(e)}")
-        return Response(
-            content=f"{{'error': '{str(e)}'}}",
-            media_type="application/json",
-            status_code=500,
-            headers={
-                "MCP-Protocol-Version": "2025-06-18",
-                "Cache-Control": "no-cache"
-            }
-        )
+    return await handle_mcp_asgi(request.scope, request.receive, request._send)
 
 @app.get("/mcp")
 async def handle_mcp_get(request: Request):
     """Handle MCP SSE stream via GET"""
-    try:
-        # Get the response from FastMCP
-        mcp_response = await mcp.http_app()(request.scope, request.receive, request._send)
-        
-        # Ensure we have a response object
-        if mcp_response is None:
-            raise ValueError("MCP returned None response")
-            
-        # Set required headers
-        mcp_response.headers["MCP-Protocol-Version"] = "2025-06-18"
-        mcp_response.headers["Cache-Control"] = "no-cache"
-        return mcp_response
-        
-    except Exception as e:
-        logger.error(f"MCP GET handler error: {str(e)}")
-        return Response(
-            content=f"{{'error': '{str(e)}'}}",
-            media_type="text/event-stream",
-            status_code=500,
-            headers={
-                "MCP-Protocol-Version": "2025-06-18",
-                "Cache-Control": "no-cache"
-            }
-        )
+    return await handle_mcp_asgi(request.scope, request.receive, request._send)
 
 if __name__ == "__main__":
     import uvicorn
