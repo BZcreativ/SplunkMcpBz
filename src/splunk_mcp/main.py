@@ -185,10 +185,11 @@ async def search_splunk(query: str, index: str = "*", earliest: str = "-24h", la
         logger.error(f"Unexpected search error: {str(e)}")
         raise SplunkQueryError("Search failed") from e
 
-# Create main app with CORS and proper headers
-app = FastAPI()
+# Create single FastAPI app with MCP lifespan
+mcp_app = mcp.http_app(path='/mcp')
+app = FastAPI(lifespan=mcp_app.lifespan)
 
-# Add API routes first
+# Add our custom routes first
 @app.get("/api/metrics")
 async def get_metrics(response: Response):
     """Get current server metrics"""
@@ -234,7 +235,10 @@ async def test_splunk_connection(response: Response):
             }
         }
 
-# Then add middleware
+# Mount MCP app routes
+app.include_router(mcp_app.router)
+
+# Add middleware after routes are set up
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -243,64 +247,13 @@ app.add_middleware(
     expose_headers=["MCP-Protocol-Version", "Mcp-Session-Id"]
 )
 
-# Mount MCP app with proper route handling
-app.include_router(mcp.http_app().router, prefix="/mcp")
-logger.info("MCP routes mounted at /mcp")
-
-# MCP Standard HTTP Transport Endpoints
-async def wrap_mcp_asgi(app):
-    """Wrapper for FastMCP's ASGI app to handle protocol requirements"""
-    async def wrapped_app(scope, receive, send):
-        try:
-            # Store the original send function
-            original_send = send
-            
-            # Create a wrapper to intercept response messages
-            async def wrapped_send(message):
-                if message['type'] == 'http.response.start':
-                    # Add our protocol headers
-                    if 'headers' not in message:
-                        message['headers'] = []
-                    message['headers'].extend([
-                        (b'MCP-Protocol-Version', b'2025-06-18'),
-                        (b'Cache-Control', b'no-cache')
-                    ])
-                await original_send(message)
-            
-            # Call the original app with our wrapped send
-            await app(scope, receive, wrapped_send)
-            
-        except Exception as e:
-            logger.error(f"MCP ASGI wrapper error: {str(e)}")
-            await send({
-                'type': 'http.response.start',
-                'status': 500,
-                'headers': [
-                    (b'MCP-Protocol-Version', b'2025-06-18'),
-                    (b'Cache-Control', b'no-cache'),
-                    (b'Content-Type', b'application/json'),
-                ]
-            })
-            await send({
-                'type': 'http.response.body',
-                'body': f'{{"error": "{str(e)}"}}'.encode(),
-                'more_body': False
-            })
-    
-    return wrapped_app
-
-# Get FastMCP's ASGI app and wrap it
-mcp_asgi_app = wrap_mcp_asgi(mcp.http_app())
-
-@app.post("/mcp")
-async def handle_mcp_post(request: Request):
-    """Handle MCP JSON-RPC messages via POST"""
-    return await mcp_asgi_app(request.scope, request.receive, request._send)
-
-@app.get("/mcp")
-async def handle_mcp_get(request: Request):
-    """Handle MCP SSE stream via GET"""
-    return await mcp_asgi_app(request.scope, request.receive, request._send)
+# Add protocol headers middleware
+@app.middleware("http")
+async def add_protocol_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["MCP-Protocol-Version"] = "2025-06-18"
+    response.headers["Cache-Control"] = "no-cache"
+    return response
 
 if __name__ == "__main__":
     import uvicorn
