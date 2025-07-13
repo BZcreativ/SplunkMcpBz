@@ -251,18 +251,38 @@ logger.info("MCP routes mounted at /mcp")
 @app.post("/mcp")
 async def handle_mcp_post(request: Request):
     """Handle MCP JSON-RPC messages via POST"""
-    response = await mcp.http_app()(request.scope, request.receive, request._send)
-    response.headers["MCP-Protocol-Version"] = "2025-06-18"
-    response.headers["Cache-Control"] = "no-cache"
-    return response
+    response = Response(
+        content="",
+        media_type="application/json",
+        headers={
+            "MCP-Protocol-Version": "2025-06-18",
+            "Cache-Control": "no-cache"
+        }
+    )
+    try:
+        return await mcp.http_app()(request.scope, request.receive, request._send)
+    except Exception as e:
+        logger.error(f"MCP POST handler error: {str(e)}")
+        response.status_code = 500
+        return response
 
 @app.get("/mcp")
 async def handle_mcp_get(request: Request):
     """Handle MCP SSE stream via GET"""
-    response = await mcp.http_app()(request.scope, request.receive, request._send)
-    response.headers["MCP-Protocol-Version"] = "2025-06-18"
-    response.headers["Cache-Control"] = "no-cache"
-    return response
+    response = Response(
+        content="",
+        media_type="text/event-stream",
+        headers={
+            "MCP-Protocol-Version": "2025-06-18", 
+            "Cache-Control": "no-cache"
+        }
+    )
+    try:
+        return await mcp.http_app()(request.scope, request.receive, request._send)
+    except Exception as e:
+        logger.error(f"MCP GET handler error: {str(e)}")
+        response.status_code = 500
+        return response
 
 if __name__ == "__main__":
     import uvicorn
