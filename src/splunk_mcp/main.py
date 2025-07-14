@@ -1,11 +1,33 @@
 print("SPLUNK MCP SERVER STARTING")  # Module-level print to verify execution
 from fastmcp import FastMCP
-from fastapi import FastAPI, Response, Request, APIRouter
-import logging
-import os
-from typing import Optional
+from fastapi import FastAPI, Response, Request, APIRouter, Depends, HTTPException, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+from pydantic import BaseModel
+import logging
+import os
+from typing import Optional, Dict, Any, List
+import time
+
+# Import security modules
+from .security import (
+    security_middleware, 
+    security_logger, 
+    security_config,
+    TokenManager,
+    RoleBasedAccessControl,
+    SecurityMiddleware
+)
+from .auth_middleware import (
+    security_utils,
+    security_headers,
+    token_service,
+    security_validator,
+    get_current_user,
+    require_permission,
+    check_rate_limit
+)
 
 # Custom exceptions
 class SplunkConnectionError(Exception):
@@ -14,6 +36,10 @@ class SplunkConnectionError(Exception):
 
 class SplunkQueryError(Exception):
     """Raised when a Splunk query fails"""
+    pass
+
+class AuthenticationError(Exception):
+    """Raised when authentication fails"""
     pass
 
 # Initialize logging first
@@ -26,6 +52,29 @@ logging.basicConfig(
 logger = logging.getLogger('mcp.protocol')
 logger.info("Logger successfully initialized")
 
+# --- Request Models ---
+class LoginRequest(BaseModel):
+    username: str
+    password: str
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: str
+    expires_in: int
+    user_id: str
+    roles: List[str]
+
+class UserCreateRequest(BaseModel):
+    username: str
+    password: str
+    roles: List[str]
+
+class HealthResponse(BaseModel):
+    status: str
+    version: str
+    services: List[str]
+    authenticated: bool = False
+
 # --- Monitoring Metrics ---
 class SplunkMetrics:
     def __init__(self):
@@ -35,6 +84,9 @@ class SplunkMetrics:
         self.query_count = 0
         self.query_errors = 0
         self.query_timeouts = 0
+        self.auth_attempts = 0
+        self.auth_successes = 0
+        self.auth_failures = 0
 
     def increment_connection_attempts(self): self.connection_attempts += 1
     def increment_connection_successes(self): self.connection_successes += 1
@@ -42,6 +94,9 @@ class SplunkMetrics:
     def increment_query_count(self): self.query_count += 1
     def increment_query_errors(self): self.query_errors += 1
     def increment_query_timeouts(self): self.query_timeouts += 1
+    def increment_auth_attempts(self): self.auth_attempts += 1
+    def increment_auth_successes(self): self.auth_successes += 1
+    def increment_auth_failures(self): self.auth_failures += 1
 
     def get_metrics(self):
         return {
@@ -56,10 +111,69 @@ class SplunkMetrics:
                 "errors": self.query_errors,
                 "timeouts": self.query_timeouts,
                 "error_rate": self.query_errors / max(1, self.query_count)
+            },
+            "authentication": {
+                "attempts": self.auth_attempts,
+                "successes": self.auth_successes,
+                "failures": self.auth_failures,
+                "success_rate": self.auth_successes / max(1, self.auth_attempts)
             }
         }
 
 metrics = SplunkMetrics()
+
+# --- User Management ---
+class UserManager:
+    """Simple in-memory user management for demo purposes"""
+    
+    def __init__(self):
+        self.users = {
+            "admin": {
+                "password": self._hash_password("admin123"),
+                "roles": ["admin"],
+                "user_id": "admin"
+            },
+            "user": {
+                "password": self._hash_password("user123"),
+                "roles": ["user"],
+                "user_id": "user"
+            },
+            "readonly": {
+                "password": self._hash_password("readonly123"),
+                "roles": ["readonly"],
+                "user_id": "readonly"
+            }
+        }
+    
+    def _hash_password(self, password: str) -> str:
+        """Hash password using SHA256"""
+        import hashlib
+        return hashlib.sha256(password.encode()).hexdigest()
+    
+    def authenticate_user(self, username: str, password: str) -> Optional[Dict[str, Any]]:
+        """Authenticate user credentials"""
+        if username in self.users:
+            hashed_password = self._hash_password(password)
+            if self.users[username]["password"] == hashed_password:
+                return {
+                    "user_id": self.users[username]["user_id"],
+                    "username": username,
+                    "roles": self.users[username]["roles"]
+                }
+        return None
+    
+    def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by ID"""
+        for username, user_data in self.users.items():
+            if user_data["user_id"] == user_id:
+                return {
+                    "user_id": user_id,
+                    "username": username,
+                    "roles": user_data["roles"]
+                }
+        return None
+
+user_manager = UserManager()
 
 # --- Splunk Service ---
 def get_splunk_service(max_retries: int = 3):
@@ -88,12 +202,85 @@ def get_splunk_service(max_retries: int = 3):
 mcp = FastMCP("SplunkMCP")
 logger.info("MCP initialized")
 
+# Security scheme for API
+security = HTTPBearer()
+
+async def get_current_user_from_token(
+    credentials: HTTPAuthorizationCredentials = Security(security)
+) -> Dict[str, Any]:
+    """Get current authenticated user from token"""
+    if not credentials:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication credentials required"
+        )
+    
+    token = credentials.credentials
+    user_data = security_middleware.authenticate_request(token)
+    
+    if not user_data:
+        security_logger.log_authentication(
+            user_id="unknown",
+            success=False
+        )
+        metrics.increment_auth_failures()
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired token"
+        )
+    
+    # Get full user data
+    user = user_manager.get_user_by_id(user_data.get('user_id'))
+    if not user:
+        metrics.increment_auth_failures()
+        raise HTTPException(
+            status_code=401,
+            detail="User not found"
+        )
+    
+    security_logger.log_authentication(
+        user_id=user['user_id'],
+        success=True
+    )
+    metrics.increment_auth_successes()
+    
+    return user
+
+def require_permission(permission: str):
+    """Dependency for requiring specific permissions"""
+    def permission_checker(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+        if not security_middleware.authorize_request(current_user, permission):
+            security_logger.log_authorization(
+                user_id=current_user.get('user_id', 'unknown'),
+                permission=permission,
+                success=False
+            )
+            raise HTTPException(
+                status_code=403,
+                detail=f"Insufficient permissions: {permission}"
+            )
+        
+        security_logger.log_authorization(
+            user_id=current_user.get('user_id', 'unknown'),
+            permission=permission,
+            success=True
+        )
+        
+        return current_user
+    
+    return permission_checker
+
+# MCP Tools with Security
 @mcp.tool()
 async def mcp_health_check() -> dict:
     return {"status": "ok", "services": ["splunk", "redis"]}
 
 @mcp.tool()
-async def list_indexes() -> list:
+async def list_indexes(current_user: Dict[str, Any] = Depends(get_current_user_from_token)) -> list:
+    """List Splunk indexes (requires read:search permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:search'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     try:
         indexes = get_splunk_service().indexes
         return [idx.name for idx in indexes] if indexes else []
@@ -106,9 +293,18 @@ async def splunk_search(
     query: str,
     earliest_time: str = "-24h",
     latest_time: str = "now",
-    output_mode: str = "json"
+    output_mode: str = "json",
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
 ) -> dict:
-    """Execute a Splunk search query and return results"""
+    """Execute a Splunk search query and return results (requires read:search permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:search'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    # Validate query for security
+    is_valid, error_msg = security_validator.validate_splunk_query(query)
+    if not is_valid:
+        raise HTTPException(status_code=400, detail=f"Invalid query: {error_msg}")
+    
     from .search_helper import execute_splunk_search
     try:
         return await execute_splunk_search(
@@ -122,8 +318,14 @@ async def splunk_search(
         raise
 
 @mcp.tool()
-async def get_itsi_services(service_name: Optional[str] = None) -> list:
-    """Get ITSI services"""
+async def get_itsi_services(
+    service_name: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI services (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     from .itsi_helper import ITSIHelper
     try:
         service = get_splunk_service()
@@ -134,8 +336,14 @@ async def get_itsi_services(service_name: Optional[str] = None) -> list:
         raise SplunkQueryError("Failed to get ITSI services")
 
 @mcp.tool()
-async def get_itsi_service_health(service_name: str) -> dict:
-    """Get health status for a specific ITSI service"""
+async def get_itsi_service_health(
+    service_name: str,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> dict:
+    """Get health status for a specific ITSI service (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     from .itsi_helper import ITSIHelper
     try:
         service = get_splunk_service()
@@ -146,8 +354,14 @@ async def get_itsi_service_health(service_name: str) -> dict:
         raise SplunkQueryError("Failed to get ITSI service health")
 
 @mcp.tool()
-async def get_itsi_kpis(service_name: Optional[str] = None) -> list:
-    """Get ITSI KPIs"""
+async def get_itsi_kpis(
+    service_name: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI KPIs (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     from .itsi_helper import ITSIHelper
     try:
         service = get_splunk_service()
@@ -158,8 +372,14 @@ async def get_itsi_kpis(service_name: Optional[str] = None) -> list:
         raise SplunkQueryError("Failed to get ITSI KPIs")
 
 @mcp.tool()
-async def get_itsi_alerts(service_name: Optional[str] = None) -> list:
-    """Get ITSI alerts"""
+async def get_itsi_alerts(
+    service_name: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI alerts (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     from .itsi_helper import ITSIHelper
     try:
         service = get_splunk_service()
@@ -170,8 +390,14 @@ async def get_itsi_alerts(service_name: Optional[str] = None) -> list:
         raise SplunkQueryError("Failed to get ITSI alerts")
 
 @mcp.tool()
-async def get_itsi_entities(service_name: Optional[str] = None) -> list:
-    """Get ITSI service entities"""
+async def get_itsi_entities(
+    service_name: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI service entities (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     from .itsi_helper import ITSIHelper
     try:
         service = get_splunk_service()
@@ -182,8 +408,13 @@ async def get_itsi_entities(service_name: Optional[str] = None) -> list:
         raise SplunkQueryError("Failed to get ITSI entities")
 
 @mcp.tool()
-async def get_itsi_entity_types() -> list:
-    """Get ITSI entity types"""
+async def get_itsi_entity_types(
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI entity types (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     from .itsi_helper import ITSIHelper
     try:
         service = get_splunk_service()
@@ -194,8 +425,13 @@ async def get_itsi_entity_types() -> list:
         raise SplunkQueryError("Failed to get ITSI entity types")
 
 @mcp.tool()
-async def get_itsi_glass_tables() -> list:
-    """Get ITSI glass tables"""
+async def get_itsi_glass_tables(
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI glass tables (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     from .itsi_helper import ITSIHelper
     try:
         service = get_splunk_service()
@@ -206,8 +442,15 @@ async def get_itsi_glass_tables() -> list:
         raise SplunkQueryError("Failed to get ITSI glass tables")
 
 @mcp.tool()
-async def get_itsi_service_analytics(service_name: str, time_range: str = "-24h") -> dict:
-    """Get analytics for an ITSI service"""
+async def get_itsi_service_analytics(
+    service_name: str,
+    time_range: str = "-24h",
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> dict:
+    """Get analytics for an ITSI service (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     from .itsi_helper import ITSIHelper
     try:
         service = get_splunk_service()
@@ -220,16 +463,96 @@ async def get_itsi_service_analytics(service_name: str, time_range: str = "-24h"
 # --- API Application ---
 api_router = APIRouter()
 
+@api_router.post("/auth/login", response_model=TokenResponse)
+async def login(request: LoginRequest):
+    """Authenticate user and return access token"""
+    metrics.increment_auth_attempts()
+    
+    user = user_manager.authenticate_user(request.username, request.password)
+    if not user:
+        metrics.increment_auth_failures()
+        security_logger.log_authentication(
+            user_id=request.username,
+            success=False
+        )
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password"
+        )
+    
+    # Check rate limit
+    allowed, remaining = security_middleware.check_rate_limit(user['user_id'])
+    if not allowed:
+        security_logger.log_rate_limit(user_id=user['user_id'])
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded"
+        )
+    
+    # Generate token
+    token = security_middleware.token_manager.generate_token(
+        user['user_id'],
+        user['roles'],
+        expires_in=security_config.token_expiry_hours
+    )
+    
+    security_logger.log_authentication(
+        user_id=user['user_id'],
+        success=True
+    )
+    metrics.increment_auth_successes()
+    
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in=security_config.token_expiry_hours * 3600,
+        user_id=user['user_id'],
+        roles=user['roles']
+    )
+
+@api_router.post("/auth/refresh")
+async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+    """Refresh access token"""
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Token required")
+    
+    token = credentials.credentials
+    new_token = security_middleware.token_manager.refresh_token(token)
+    
+    if not new_token:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    return {"access_token": new_token, "token_type": "bearer"}
+
+@api_router.get("/auth/me")
+async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+    """Get current user information"""
+    return {
+        "user_id": current_user['user_id'],
+        "username": current_user['username'],
+        "roles": current_user['roles'],
+        "permissions": security_middleware.rbac.get_user_permissions(current_user['roles'])
+    }
+
 @api_router.get("/metrics")
-async def get_metrics_endpoint():
+async def get_metrics_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+    """Get system metrics (requires admin role)"""
+    if not security_middleware.authorize_request(current_user, 'read:*'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
     return metrics.get_metrics()
 
 @api_router.get("/health")
 async def health_check_endpoint():
+    """Health check endpoint (public)"""
     return {"status": "ok", "version": "1.0.0", "services": ["splunk", "redis"]}
 
 @api_router.get("/test-splunk-connection")
-async def test_splunk_connection_endpoint():
+async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+    """Test Splunk connection (requires read:search permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:search'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
     try:
         service = get_splunk_service()
         return {"status": "success", "message": "Successfully connected to Splunk",
@@ -239,43 +562,92 @@ async def test_splunk_connection_endpoint():
         return {"status": "error", "message": str(e),
                 "details": {"host": os.getenv("SPLUNK_HOST"), "port": os.getenv("SPLUNK_PORT")}}
 
+# --- Security Middleware ---
+@root_app.middleware("http")
+async def security_middleware_func(request: Request, call_next):
+    """Security middleware for all requests"""
+    start_time = time.time()
+    
+    # Add security headers
+    response = await call_next(request)
+    response = security_headers.add_security_headers(response)
+    
+    # Add rate limit headers
+    client_ip = request.client.host if request.client else "unknown"
+    allowed, remaining = security_middleware.check_rate_limit(client_ip)
+    
+    response.headers["X-RateLimit-Remaining"] = str(remaining)
+    
+    # Log request
+    process_time = time.time() - start_time
+    logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s")
+    
+    return response
+
 # --- Lifespan Management ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Application lifespan startup")
+    logger.info("Security configuration validated" if security_config.validate_config() else "Security configuration invalid")
+    
     # FastMCP's lifespan manages its own resources
     async with mcp.http_app().router.lifespan_context(mcp.http_app()):
         yield
     logger.info("Application lifespan shutdown")
 
 # --- Root Application Assembly ---
-root_app = FastAPI(lifespan=lifespan)
+root_app = FastAPI(
+    title="Splunk MCP Server",
+    description="Secure Splunk MCP server with authentication and authorization",
+    version="1.0.0",
+    lifespan=lifespan
+)
 
 # Apply middleware to the root app
 root_app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*", "MCP-Protocol-Version", "Mcp-Session-Id"],
-    expose_headers=["MCP-Protocol-Version", "Mcp-Session-Id"]
+    allow_origins=security_config.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*", "Authorization", "MCP-Protocol-Version", "Mcp-Session-Id"],
+    expose_headers=["MCP-Protocol-Version", "Mcp-Session-Id", "X-RateLimit-Remaining"]
 )
-
-@root_app.middleware("http")
-async def add_protocol_headers(request: Request, call_next):
-    response = await call_next(request)
-    response.headers["MCP-Protocol-Version"] = "2025-07-13"
-    response.headers["Cache-Control"] = "no-cache"
-    return response
 
 # Mount the sub-applications
 api_app = FastAPI(routes=api_router.routes)
 root_app.mount("/api", api_app)
 
-# Create dedicated MCP router
+# Create dedicated MCP router with security
 mcp_router = APIRouter()
 
 @mcp_router.api_route("/{path:path}", methods=["GET", "POST"])
-async def handle_mcp_requests(request: Request, path: str):
+async def handle_mcp_requests(
+    request: Request, 
+    path: str,
+    credentials: HTTPAuthorizationCredentials = Security(security)
+):
+    """Handle MCP requests with authentication"""
+    # Authenticate request
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    
+    token = credentials.credentials
+    user_data = security_middleware.authenticate_request(token)
+    
+    if not user_data:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    # Check rate limit
+    client_ip = request.client.host if request.client else "unknown"
+    allowed, remaining = security_middleware.check_rate_limit(client_ip)
+    
+    if not allowed:
+        raise HTTPException(
+            status_code=429,
+            detail="Rate limit exceeded",
+            headers={"X-RateLimit-Remaining": str(remaining)}
+        )
+    
     # Create proper ASGI scope for MCP
     scope = {
         "type": "http",
@@ -289,7 +661,7 @@ async def handle_mcp_requests(request: Request, path: str):
         "scheme": request.url.scheme,
         "root_path": "",
         "app": root_app,
-        "state": {}
+        "state": {"user": user_data}
     }
     
     # Forward request to MCP app with proper ASGI call
@@ -337,5 +709,7 @@ if __name__ == "__main__":
         host="0.0.0.0",
         port=8334,
         timeout_keep_alive=60,
-        log_config=None
+        log_config=None,
+        ssl_keyfile=os.getenv("SSL_KEYFILE"),
+        ssl_certfile=os.getenv("SSL_CERTFILE")
     )
