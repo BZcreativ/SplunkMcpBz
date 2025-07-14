@@ -562,6 +562,23 @@ async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends
         return {"status": "error", "message": str(e),
                 "details": {"host": os.getenv("SPLUNK_HOST"), "port": os.getenv("SPLUNK_PORT")}}
 
+# --- Root Application Assembly ---
+root_app = FastAPI(
+    title="Splunk MCP Server",
+    description="Secure Splunk MCP server with authentication and authorization",
+    version="1.0.0"
+)
+
+# --- Lifespan Management ---
+@root_app.on_event("startup")
+async def startup_event():
+    logger.info("Application lifespan startup")
+    logger.info("Security configuration validated" if security_config.validate_config() else "Security configuration invalid")
+
+@root_app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Application lifespan shutdown")
+
 # --- Security Middleware ---
 @root_app.middleware("http")
 async def security_middleware_func(request: Request, call_next):
@@ -583,25 +600,6 @@ async def security_middleware_func(request: Request, call_next):
     logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s")
     
     return response
-
-# --- Lifespan Management ---
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    logger.info("Application lifespan startup")
-    logger.info("Security configuration validated" if security_config.validate_config() else "Security configuration invalid")
-    
-    # FastMCP's lifespan manages its own resources
-    async with mcp.http_app().router.lifespan_context(mcp.http_app()):
-        yield
-    logger.info("Application lifespan shutdown")
-
-# --- Root Application Assembly ---
-root_app = FastAPI(
-    title="Splunk MCP Server",
-    description="Secure Splunk MCP server with authentication and authorization",
-    version="1.0.0",
-    lifespan=lifespan
-)
 
 # Apply middleware to the root app
 root_app.add_middleware(
