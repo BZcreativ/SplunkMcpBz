@@ -12,8 +12,8 @@ import time
 
 # Import security modules
 from .security import (
-    security_middleware, 
-    security_logger, 
+    security_middleware,
+    security_logger,
     security_config,
     TokenManager,
     RoleBasedAccessControl,
@@ -28,6 +28,7 @@ from .auth_middleware import (
     require_permission,
     check_rate_limit
 )
+from .redis_manager import redis_manager
 
 # Custom exceptions
 class SplunkConnectionError(Exception):
@@ -294,6 +295,7 @@ async def splunk_search(
     earliest_time: str = "-24h",
     latest_time: str = "now",
     output_mode: str = "json",
+    use_cache: bool = True,
     current_user: Dict[str, Any] = Depends(get_current_user_from_token)
 ) -> dict:
     """Execute a Splunk search query and return results (requires read:search permission)"""
@@ -305,14 +307,30 @@ async def splunk_search(
     if not is_valid:
         raise HTTPException(status_code=400, detail=f"Invalid query: {error_msg}")
     
+    # Create cache key
+    cache_key = f"{query}:{earliest_time}:{latest_time}:{output_mode}"
+    
+    # Check cache if enabled
+    if use_cache:
+        cached_result = redis_manager.get_cached_query(cache_key)
+        if cached_result:
+            logger.info("Returning cached search results")
+            return cached_result
+    
     from .search_helper import execute_splunk_search
     try:
-        return await execute_splunk_search(
+        result = await execute_splunk_search(
             query,
             earliest_time=earliest_time,
             latest_time=latest_time,
             output_mode=output_mode
         )
+        
+        # Cache the result
+        if use_cache:
+            redis_manager.cache_query(cache_key, result, ttl=300)
+        
+        return result
     except SplunkQueryError as e:
         logger.error(f"Splunk search failed for query '{query}': {e}")
         raise
@@ -540,12 +558,45 @@ async def get_metrics_endpoint(current_user: Dict[str, Any] = Depends(get_curren
     if not security_middleware.authorize_request(current_user, 'read:*'):
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    return metrics.get_metrics()
+    redis_health = redis_manager.health_check()
+    return {
+        **metrics.get_metrics(),
+        "redis": redis_health
+    }
 
 @api_router.get("/health")
 async def health_check_endpoint():
     """Health check endpoint (public)"""
-    return {"status": "ok", "version": "1.0.0", "services": ["splunk", "redis"]}
+    redis_health = redis_manager.health_check()
+    return {
+        "status": "ok",
+        "version": "1.0.0",
+        "services": ["splunk", "redis"],
+        "redis_details": redis_health
+    }
+
+@api_router.get("/redis/cache/stats")
+async def get_cache_stats(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+    """Get Redis cache statistics"""
+    if not security_middleware.authorize_request(current_user, 'read:*'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if not redis_manager.is_connected():
+        raise HTTPException(status_code=503, detail="Redis not available")
+    
+    return redis_manager.health_check()
+
+@api_router.post("/redis/cache/clear")
+async def clear_cache(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+    """Clear Redis cache"""
+    if not security_middleware.authorize_request(current_user, 'write:*'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    if not redis_manager.is_connected():
+        raise HTTPException(status_code=503, detail="Redis not available")
+    
+    # This would require implementing cache clearing functionality
+    return {"message": "Cache clearing functionality to be implemented"}
 
 @api_router.get("/test-splunk-connection")
 async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
