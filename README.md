@@ -113,11 +113,31 @@ JWT_SECRET_KEY=your-secret-key
 - `GET /api/health/redis` - Redis connection status
 
 ### MCP Tools
+
+#### Core Splunk Tools
 - `search_splunk` - Execute Splunk searches
-- `get_itsi_services` - List ITSI services
-- `get_itsi_kpis` - Get service KPIs
-- `get_itsi_episodes` - Retrieve notable events
-- `create_itsi_episode` - Create new episode
+- `get_server_info` - Get Splunk server information
+- `list_indexes` - List available Splunk indexes
+
+#### ITSI Tools (15 Total)
+**Core ITSI Operations:**
+- `get_itsi_services` - List and manage ITSI services
+- `get_itsi_service_health` - Get health status for specific services
+- `get_itsi_kpis` - Get service KPIs and metrics
+- `get_itsi_alerts` - Retrieve ITSI alerts and notifications
+- `get_itsi_entities` - Manage ITSI service entities
+- `get_itsi_entity_types` - Get ITSI entity type definitions
+- `get_itsi_glass_tables` - Access ITSI glass table views
+- `get_itsi_service_analytics` - Get service analytics and trends
+
+**Enhanced ITSI Features (New in v2.1.0):**
+- `get_itsi_deep_dives` - ITSI deep dive analysis and investigations
+- `get_itsi_home_views` - Home view configuration management
+- `get_itsi_kpi_templates` - KPI template system integration
+- `get_itsi_notable_events` - Notable event tracking with time filtering
+- `get_itsi_correlation_searches` - Correlation search management
+- `get_itsi_maintenance_calendars` - Maintenance calendar scheduling
+- `get_itsi_teams` - Team management and collaboration
 
 ## 🧪 Testing
 
@@ -131,9 +151,27 @@ pytest tests/
 pytest tests/integration/
 ```
 
+### ITSI Integration Tests (New in v2.1.0)
+```bash
+# Simple ITSI functionality test
+python scripts/test_itsi_simple.py
+
+# Enhanced ITSI integration test
+python scripts/test_enhanced_itsi.py
+
+# ITSI helper function validation
+python scripts/test_itsi_helper_functions.py
+```
+
 ### Redis Integration Test
 ```bash
 python tests/integration/test_redis_integration.py
+```
+
+### Deployment Testing
+```bash
+# Test deployment to remote server
+python scripts/deploy_to_remote.py
 ```
 
 ## 📊 Redis Features

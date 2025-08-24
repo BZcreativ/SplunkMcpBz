@@ -478,6 +478,128 @@ async def get_itsi_service_analytics(
         logger.error(f"Error getting ITSI service analytics: {e}")
         raise SplunkQueryError("Failed to get ITSI service analytics")
 
+@mcp.tool()
+async def get_itsi_deep_dives(
+    service_name: Optional[str] = None,
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI deep dives (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_deep_dives(service_name)
+    except Exception as e:
+        logger.error(f"Error getting ITSI deep dives: {e}")
+        raise SplunkQueryError("Failed to get ITSI deep dives")
+
+@mcp.tool()
+async def get_itsi_home_views(
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI home views (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_home_views()
+    except Exception as e:
+        logger.error(f"Error getting ITSI home views: {e}")
+        raise SplunkQueryError("Failed to get ITSI home views")
+
+@mcp.tool()
+async def get_itsi_kpi_templates(
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI KPI templates (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_kpi_templates()
+    except Exception as e:
+        logger.error(f"Error getting ITSI KPI templates: {e}")
+        raise SplunkQueryError("Failed to get ITSI KPI templates")
+
+@mcp.tool()
+async def get_itsi_notable_events(
+    service_name: Optional[str] = None,
+    time_range: str = "-24h",
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI notable events (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_notable_events(service_name, time_range)
+    except Exception as e:
+        logger.error(f"Error getting ITSI notable events: {e}")
+        raise SplunkQueryError("Failed to get ITSI notable events")
+
+@mcp.tool()
+async def get_itsi_correlation_searches(
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI correlation searches (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_correlation_searches()
+    except Exception as e:
+        logger.error(f"Error getting ITSI correlation searches: {e}")
+        raise SplunkQueryError("Failed to get ITSI correlation searches")
+
+@mcp.tool()
+async def get_itsi_maintenance_calendars(
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI maintenance calendars (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_maintenance_calendars()
+    except Exception as e:
+        logger.error(f"Error getting ITSI maintenance calendars: {e}")
+        raise SplunkQueryError("Failed to get ITSI maintenance calendars")
+
+@mcp.tool()
+async def get_itsi_teams(
+    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+) -> list:
+    """Get ITSI teams (requires read:itsi permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:itsi'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_teams()
+    except Exception as e:
+        logger.error(f"Error getting ITSI teams: {e}")
+        raise SplunkQueryError("Failed to get ITSI teams")
+
 # --- API Application ---
 api_router = APIRouter()
 

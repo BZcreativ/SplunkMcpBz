@@ -216,3 +216,169 @@ class ITSIHelper:
         except Exception as e:
             logger.error(f"Error getting glass tables: {e}")
             raise
+    
+    def get_deep_dives(self, service_name: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get ITSI deep dives"""
+        try:
+            search = '| rest /servicesNS/nobody/SA-ITOA/itoa_interface/deep_dive'
+            if service_name:
+                search += f' | search service_name="{service_name}"'
+            
+            job = self.service.jobs.oneshot(search)
+            deep_dives = []
+            for result in job.results():
+                deep_dive = json.loads(result['_raw'])
+                deep_dives.append({
+                    'title': deep_dive.get('title'),
+                    'description': deep_dive.get('description'),
+                    'service_name': deep_dive.get('service_name'),
+                    'drilldown_search': deep_dive.get('drilldown_search'),
+                    'created': deep_dive.get('created', ''),
+                    'modified': deep_dive.get('modified', '')
+                })
+            return deep_dives
+        except Exception as e:
+            logger.error(f"Error getting deep dives: {e}")
+            raise
+    
+    def get_home_views(self) -> List[Dict[str, Any]]:
+        """Get ITSI home views"""
+        try:
+            search = '| rest /servicesNS/nobody/SA-ITOA/itoa_interface/home_view'
+            job = self.service.jobs.oneshot(search)
+            home_views = []
+            for result in job.results():
+                home_view = json.loads(result['_raw'])
+                home_views.append({
+                    'title': home_view.get('title'),
+                    'description': home_view.get('description'),
+                    'layout': home_view.get('layout'),
+                    'widgets': home_view.get('widgets', []),
+                    'created': home_view.get('created', ''),
+                    'modified': home_view.get('modified', '')
+                })
+            return home_views
+        except Exception as e:
+            logger.error(f"Error getting home views: {e}")
+            raise
+    
+    def get_kpi_templates(self) -> List[Dict[str, Any]]:
+        """Get ITSI KPI templates"""
+        try:
+            search = '| rest /servicesNS/nobody/SA-ITOA/itoa_interface/kpi_template'
+            job = self.service.jobs.oneshot(search)
+            kpi_templates = []
+            for result in job.results():
+                kpi_template = json.loads(result['_raw'])
+                kpi_templates.append({
+                    'title': kpi_template.get('title'),
+                    'description': kpi_template.get('description'),
+                    'search': kpi_template.get('search'),
+                    'threshold_template': kpi_template.get('threshold_template'),
+                    'unit': kpi_template.get('unit'),
+                    'created': kpi_template.get('created', ''),
+                    'modified': kpi_template.get('modified', '')
+                })
+            return kpi_templates
+        except Exception as e:
+            logger.error(f"Error getting KPI templates: {e}")
+            raise
+    
+    def get_notable_events(self, service_name: Optional[str] = None, time_range: str = "-24h") -> List[Dict[str, Any]]:
+        """Get ITSI notable events"""
+        try:
+            search = f'''
+            | rest /servicesNS/nobody/SA-ITOA/itoa_interface/notable_event
+            | eval time_range="{time_range}"
+            | where _time >= relative_time(now(), "{time_range}")
+            '''
+            if service_name:
+                search += f' | search service_name="{service_name}"'
+            
+            job = self.service.jobs.oneshot(search)
+            notable_events = []
+            for result in job.results():
+                notable_event = json.loads(result['_raw'])
+                notable_events.append({
+                    'title': notable_event.get('title'),
+                    'description': notable_event.get('description'),
+                    'service_name': notable_event.get('service_name'),
+                    'severity': notable_event.get('severity'),
+                    'status': notable_event.get('status'),
+                    'owner': notable_event.get('owner'),
+                    'created': notable_event.get('created', ''),
+                    'updated': notable_event.get('updated', ''),
+                    'urgency': notable_event.get('urgency', 'medium')
+                })
+            return notable_events
+        except Exception as e:
+            logger.error(f"Error getting notable events: {e}")
+            raise
+    
+    def get_correlation_searches(self) -> List[Dict[str, Any]]:
+        """Get ITSI correlation searches"""
+        try:
+            search = '| rest /servicesNS/nobody/SA-ITOA/itoa_interface/correlation_search'
+            job = self.service.jobs.oneshot(search)
+            correlation_searches = []
+            for result in job.results():
+                correlation_search = json.loads(result['_raw'])
+                correlation_searches.append({
+                    'title': correlation_search.get('title'),
+                    'description': correlation_search.get('description'),
+                    'search': correlation_search.get('search'),
+                    'cron_schedule': correlation_search.get('cron_schedule'),
+                    'enabled': correlation_search.get('enabled', False),
+                    'actions': correlation_search.get('actions', []),
+                    'created': correlation_search.get('created', ''),
+                    'modified': correlation_search.get('modified', '')
+                })
+            return correlation_searches
+        except Exception as e:
+            logger.error(f"Error getting correlation searches: {e}")
+            raise
+    
+    def get_maintenance_calendars(self) -> List[Dict[str, Any]]:
+        """Get ITSI maintenance calendars"""
+        try:
+            search = '| rest /servicesNS/nobody/SA-ITOA/itoa_interface/maintenance_calendar'
+            job = self.service.jobs.oneshot(search)
+            maintenance_calendars = []
+            for result in job.results():
+                maintenance_calendar = json.loads(result['_raw'])
+                maintenance_calendars.append({
+                    'title': maintenance_calendar.get('title'),
+                    'description': maintenance_calendar.get('description'),
+                    'services': maintenance_calendar.get('services', []),
+                    'start_time': maintenance_calendar.get('start_time'),
+                    'end_time': maintenance_calendar.get('end_time'),
+                    'recurrence': maintenance_calendar.get('recurrence'),
+                    'created': maintenance_calendar.get('created', ''),
+                    'modified': maintenance_calendar.get('modified', '')
+                })
+            return maintenance_calendars
+        except Exception as e:
+            logger.error(f"Error getting maintenance calendars: {e}")
+            raise
+    
+    def get_teams(self) -> List[Dict[str, Any]]:
+        """Get ITSI teams"""
+        try:
+            search = '| rest /servicesNS/nobody/SA-ITOA/itoa_interface/team'
+            job = self.service.jobs.oneshot(search)
+            teams = []
+            for result in job.results():
+                team = json.loads(result['_raw'])
+                teams.append({
+                    'title': team.get('title'),
+                    'description': team.get('description'),
+                    'members': team.get('members', []),
+                    'services': team.get('services', []),
+                    'email': team.get('email'),
+                    'created': team.get('created', ''),
+                    'modified': team.get('modified', '')
+                })
+            return teams
+        except Exception as e:
+            logger.error(f"Error getting teams: {e}")
+            raise
