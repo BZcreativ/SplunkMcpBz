@@ -95,30 +95,48 @@ SSL_KEYFILE=/path/to/ssl.key
 SSL_CERTFILE=/path/to/ssl.crt
 ```
 
-## Default Users
+## User Management
 
-⚠️ **SECURITY WARNING**: Change all default credentials immediately in production!
+⚠️ **SECURITY WARNING**: Never use default credentials in production!
 
-### Admin User
-- **Username**: admin
-- **Password**: ${ADMIN_PASSWORD} (set via environment variable)
-- **Role**: admin
+### Environment-Based User Configuration
+All user credentials must be configured via environment variables:
 
-### Standard User
-- **Username**: user
-- **Password**: ${USER_PASSWORD} (set via environment variable)
-- **Role**: user
-
-### Readonly User
-- **Username**: readonly
-- **Password**: ${READONLY_PASSWORD} (set via environment variable)
-- **Role**: readonly
-
-**Important**: Never use default passwords in production. Set strong passwords via environment variables:
 ```bash
-export ADMIN_PASSWORD="your-strong-admin-password"
-export USER_PASSWORD="your-strong-user-password"
-export READONLY_PASSWORD="your-strong-readonly-password"
+# Required: Set strong passwords for all user accounts
+export ADMIN_PASSWORD="your-secure-admin-password-here"
+export USER_PASSWORD="your-secure-user-password-here"
+export READONLY_PASSWORD="your-secure-readonly-password-here"
+
+# Optional: Custom usernames (if different from defaults)
+export ADMIN_USERNAME="your-admin-username"
+export USER_USERNAME="your-standard-username"
+export READONLY_USERNAME="your-readonly-username"
+```
+
+### Password Requirements
+- **Minimum length**: 12 characters
+- **Complexity**: Must include uppercase, lowercase, numbers, and special characters
+- **Rotation**: Change passwords every 90 days
+- **Storage**: Use secrets management systems (HashiCorp Vault, AWS Secrets Manager, etc.)
+
+### User Account Setup
+1. **Initial Setup**: Configure users via environment variables before first run
+2. **Production**: Use external authentication systems (LDAP, SAML, OAuth)
+3. **Secrets Management**: Integrate with enterprise secrets management
+4. **Audit**: Log all authentication events
+
+### Example Production Setup
+```bash
+# Using Docker
+docker run -e ADMIN_PASSWORD="$ADMIN_PASSWORD" \
+           -e USER_PASSWORD="$USER_PASSWORD" \
+           -e READONLY_PASSWORD="$READONLY_PASSWORD" \
+           -e SECRET_KEY="$SECRET_KEY" \
+           splunk-mcp-server:latest
+
+# Using Docker Compose
+# See docker-compose.yml for secure configuration examples
 ```
 
 ## Usage Examples

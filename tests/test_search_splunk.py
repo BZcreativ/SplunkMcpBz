@@ -5,7 +5,7 @@ from splunk_mcp.main import mcp
 @pytest.mark.asyncio
 async def test_search_splunk():
     async with Client(mcp) as client:
-        result = await client.call_tool("search_splunk", {"query": "search index=_internal | head 1"})
+        result = await client.call_tool("splunk_search", {"query": "search index=_internal | head 1"})
         assert "Error executing search" not in result.data
 
 @pytest.mark.asyncio
