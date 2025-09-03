@@ -97,29 +97,38 @@ SSL_CERTFILE=/path/to/ssl.crt
 
 ## Default Users
 
+⚠️ **SECURITY WARNING**: Change all default credentials immediately in production!
+
 ### Admin User
 - **Username**: admin
-- **Password**: admin123
+- **Password**: ${ADMIN_PASSWORD} (set via environment variable)
 - **Role**: admin
 
 ### Standard User
 - **Username**: user
-- **Password**: user123
+- **Password**: ${USER_PASSWORD} (set via environment variable)
 - **Role**: user
 
 ### Readonly User
 - **Username**: readonly
-- **Password**: readonly123
+- **Password**: ${READONLY_PASSWORD} (set via environment variable)
 - **Role**: readonly
+
+**Important**: Never use default passwords in production. Set strong passwords via environment variables:
+```bash
+export ADMIN_PASSWORD="your-strong-admin-password"
+export USER_PASSWORD="your-strong-user-password"
+export READONLY_PASSWORD="your-strong-readonly-password"
+```
 
 ## Usage Examples
 
 ### 1. Authentication
 ```bash
-# Login
+# Login (use environment variables for passwords)
 curl -X POST http://localhost:8334/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"username":"admin","password":"admin123"}'
+  -d "{\"username\":\"admin\",\"password\":\"$ADMIN_PASSWORD\"}"
 
 # Response
 {
@@ -152,7 +161,8 @@ curl -X GET http://localhost:8334/api/test-splunk-connection \
 ## Security Best Practices
 
 ### 1. Production Deployment
-- **Change default passwords** immediately
+- **Change default passwords** immediately - never use hardcoded credentials
+- **Use environment variables** for all sensitive configuration
 - **Use strong SECRET_KEY** (minimum 32 characters)
 - **Enable SSL/TLS** for production
 - **Configure ALLOWED_ORIGINS** appropriately
@@ -245,16 +255,18 @@ LOG_LEVEL=DEBUG
 
 ## Security Checklist
 
-- [ ] Change default passwords
-- [ ] Set strong SECRET_KEY
-- [ ] Configure ALLOWED_ORIGINS
-- [ ] Enable SSL/TLS
-- [ ] Set up monitoring
+- [ ] Change default passwords and use environment variables
+- [ ] Remove hardcoded credentials from all documentation
+- [ ] Set strong SECRET_KEY (minimum 32 characters)
+- [ ] Configure ALLOWED_ORIGINS appropriately
+- [ ] Enable SSL/TLS for production
+- [ ] Set up monitoring and alerting
 - [ ] Configure rate limiting
-- [ ] Review user permissions
-- [ ] Test security features
-- [ ] Set up log rotation
+- [ ] Review user permissions and roles
+- [ ] Test security features thoroughly
+- [ ] Set up log rotation and retention
 - [ ] Configure firewall rules
+- [ ] Implement secrets management
 
 ## Support
 
