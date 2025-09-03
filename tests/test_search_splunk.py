@@ -1,59 +1,59 @@
 import pytest
 from fastmcp import Client
-from splunk_mcp.main import mcp_server
+from splunk_mcp.main import mcp
 
 @pytest.mark.asyncio
 async def test_search_splunk():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("search_splunk", {"query": "search index=_internal | head 1"})
         assert "Error executing search" not in result.data
 
 @pytest.mark.asyncio
 async def test_list_indexes():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_indexes")
         assert "Error listing indexes" not in result.data
 
 @pytest.mark.asyncio
 async def test_list_saved_searches():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_saved_searches")
         assert "Error listing saved searches" not in result.data
 
 @pytest.mark.asyncio
 async def test_list_users():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_users")
         assert "Error listing users" not in result.data
 
 @pytest.mark.asyncio
 async def test_current_user():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("current_user")
         assert "Error getting current user" not in result.data
 
 @pytest.mark.asyncio
 async def test_list_itsi_services():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_services")
         assert "Error listing ITSI services" not in result.data
 
 @pytest.mark.asyncio
 async def test_list_kv_store_collections():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_kv_store_collections")
         print(result.data)
         assert "Error listing KV store collections" not in result.data
 
 @pytest.mark.asyncio
 async def test_list_itsi_entity_types():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_entity_types")
         assert "Error listing ITSI entity types" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_entity_type():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test entity type
         create_result = await client.call_tool("create_itsi_entity_type", {"title": "Test Entity Type", "description": "A test entity type"})
         assert "Error creating ITSI entity type" not in create_result.data
@@ -70,7 +70,7 @@ async def test_get_itsi_entity_type():
 
 @pytest.mark.asyncio
 async def test_get_itsi_service():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test service
         create_result = await client.call_tool("create_itsi_service", {"title": "Test Service", "description": "A test service"})
         assert "Error creating ITSI service" not in create_result.data
@@ -87,13 +87,13 @@ async def test_get_itsi_service():
 
 @pytest.mark.asyncio
 async def test_list_itsi_entities():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_entities")
         assert "Error listing ITSI entities" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_entity():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test entity
         create_result = await client.call_tool("create_itsi_entity", {"title": "Test Entity", "description": "A test entity"})
         assert "Error creating ITSI entity" not in create_result.data
@@ -110,13 +110,13 @@ async def test_get_itsi_entity():
 
 @pytest.mark.asyncio
 async def test_list_itsi_service_templates():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_service_templates")
         assert "Error listing ITSI service templates" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_service_template():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test service template
         create_result = await client.call_tool("create_itsi_service_template", {"title": "Test Service Template", "description": "A test service template"})
         assert "Error creating ITSI service template" not in create_result.data
@@ -133,13 +133,13 @@ async def test_get_itsi_service_template():
 
 @pytest.mark.asyncio
 async def test_list_itsi_deep_dives():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_deep_dives")
         assert "Error listing ITSI deep dives" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_deep_dive():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test deep dive
         create_result = await client.call_tool("create_itsi_deep_dive", {"title": "Test Deep Dive", "description": "A test deep dive"})
         assert "Error creating ITSI deep dive" not in create_result.data
@@ -156,13 +156,13 @@ async def test_get_itsi_deep_dive():
 
 @pytest.mark.asyncio
 async def test_list_itsi_glass_tables():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_glass_tables")
         assert "Error listing ITSI glass tables" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_glass_table():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test glass table
         create_result = await client.call_tool("create_itsi_glass_table", {"title": "Test Glass Table", "description": "A test glass table"})
         assert "Error creating ITSI glass table" not in create_result.data
@@ -179,13 +179,13 @@ async def test_get_itsi_glass_table():
 
 @pytest.mark.asyncio
 async def test_list_itsi_home_views():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_home_views")
         assert "Error listing ITSI home views" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_home_view():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test home view
         create_result = await client.call_tool("create_itsi_home_view", {"title": "Test Home View", "description": "A test home view"})
         assert "Error creating ITSI home view" not in create_result.data
@@ -202,13 +202,13 @@ async def test_get_itsi_home_view():
 
 @pytest.mark.asyncio
 async def test_list_itsi_kpi_templates():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_kpi_templates")
         assert "Error listing ITSI KPI templates" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_kpi_template():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test kpi template
         create_result = await client.call_tool("create_itsi_kpi_template", {"title": "Test KPI Template", "description": "A test kpi template"})
         assert "Error creating ITSI KPI template" not in create_result.data
@@ -225,13 +225,13 @@ async def test_get_itsi_kpi_template():
 
 @pytest.mark.asyncio
 async def test_list_itsi_kpi_threshold_templates():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_kpi_threshold_templates")
         assert "Error listing ITSI KPI threshold templates" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_kpi_threshold_template():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test kpi threshold template
         create_result = await client.call_tool("create_itsi_kpi_threshold_template", {"title": "Test KPI Threshold Template", "description": "A test kpi threshold template"})
         assert "Error creating ITSI KPI threshold template" not in create_result.data
@@ -248,13 +248,13 @@ async def test_get_itsi_kpi_threshold_template():
 
 @pytest.mark.asyncio
 async def test_list_itsi_kpi_base_searches():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_kpi_base_searches")
         assert "Error listing ITSI KPI base searches" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_kpi_base_search():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test kpi base search
         create_result = await client.call_tool("create_itsi_kpi_base_search", {"title": "Test KPI Base Search", "description": "A test kpi base search"})
         assert "Error creating ITSI KPI base search" not in create_result.data
@@ -271,13 +271,13 @@ async def test_get_itsi_kpi_base_search():
 
 @pytest.mark.asyncio
 async def test_list_itsi_notable_events():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_notable_events")
         assert "Error listing ITSI notable events" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_notable_event():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test notable event
         create_result = await client.call_tool("create_itsi_notable_event", {"title": "Test Notable Event", "description": "A test notable event"})
         assert "Error creating ITSI notable event" not in create_result.data
@@ -294,13 +294,13 @@ async def test_get_itsi_notable_event():
 
 @pytest.mark.asyncio
 async def test_list_itsi_correlation_searches():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_correlation_searches")
         assert "Error listing ITSI correlation searches" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_correlation_search():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test correlation search
         create_result = await client.call_tool("create_itsi_correlation_search", {"title": "Test Correlation Search", "description": "A test correlation search"})
         assert "Error creating ITSI correlation search" not in create_result.data
@@ -317,13 +317,13 @@ async def test_get_itsi_correlation_search():
 
 @pytest.mark.asyncio
 async def test_list_itsi_maintenance_calendars():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_maintenance_calendars")
         assert "Error listing ITSI maintenance calendars" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_maintenance_calendar():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test maintenance calendar
         create_result = await client.call_tool("create_itsi_maintenance_calendar", {"title": "Test Maintenance Calendar", "description": "A test maintenance calendar"})
         assert "Error creating ITSI maintenance calendar" not in create_result.data
@@ -340,13 +340,13 @@ async def test_get_itsi_maintenance_calendar():
 
 @pytest.mark.asyncio
 async def test_list_itsi_teams():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         result = await client.call_tool("list_itsi_teams")
         assert "Error listing ITSI teams" not in result.data
 
 @pytest.mark.asyncio
 async def test_get_itsi_team():
-    async with Client(mcp_server) as client:
+    async with Client(mcp) as client:
         # Create a test team
         create_result = await client.call_tool("create_itsi_team", {"title": "Test Team", "description": "A test team"})
         assert "Error creating ITSI team" not in create_result.data
