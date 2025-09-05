@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: splunk-mcp
+  labels:
+    name: splunk-mcp
+    app.kubernetes.io/name: splunk-mcp
+    app.kubernetes.io/version: "1.0.0"
+    app.kubernetes.io/component: namespace

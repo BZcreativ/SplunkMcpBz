@@ -68,10 +68,24 @@ This document summarizes the recent improvements and updates made to the Splunk 
 - `config/https_config.py` - SSL/TLS configuration
 - `config/redis_cluster.py` - Redis clustering configuration
 - `config/monitoring.py` - Monitoring and alerting configuration
+- `config/prometheus_metrics.py` - Prometheus metrics integration
+
+### Kubernetes Deployment
+- `k8s/namespace.yaml` - Kubernetes namespace
+- `k8s/configmap.yaml` - Kubernetes ConfigMap
+- `k8s/secret.yaml` - Kubernetes secrets
+- `k8s/deployment.yaml` - Application deployment
+- `k8s/service.yaml` - Kubernetes services
+- `k8s/ingress.yaml` - Ingress configuration
+- `k8s/redis-deployment.yaml` - Redis deployment with PVC
 
 ### Scripts
 - `scripts/setup_ssl.sh` - SSL certificate setup script
 - `scripts/benchmark.py` - Performance benchmarking script
+- `scripts/deploy-to-k8s.sh` - Kubernetes deployment automation script
+
+### Documentation
+- `docs/KUBERNETES_DEPLOYMENT.md` - Comprehensive Kubernetes deployment guide
 
 ### Tests
 - `tests/test_mcp_tools.py` - Updated test suite with proper tool names
@@ -143,6 +157,34 @@ export REDIS_CLUSTER_NODES="node1:6379,node2:6379,node3:6379"
 ```bash
 # Check health status
 python -c "from config.monitoring import HealthChecker; print(HealthChecker().get_overall_health())"
+
+# View Prometheus metrics
+python -c "from config.prometheus_metrics import get_metrics; print(get_metrics())"
+```
+
+### 6. Kubernetes Deployment
+```bash
+# Deploy to development environment
+./scripts/deploy-to-k8s.sh development
+
+# Deploy to production with custom domain
+export ADMIN_PASSWORD="your-secure-password"
+export USER_PASSWORD="your-secure-password"
+export READONLY_PASSWORD="your-secure-password"
+export SPLUNK_TOKEN="your-splunk-token"
+./scripts/deploy-to-k8s.sh production splunk-mcp.example.com
+
+# Check deployment status
+kubectl get pods -n splunk-mcp
+kubectl get svc -n splunk-mcp
+kubectl get ingress -n splunk-mcp
+
+# Access logs
+kubectl logs -f deployment/splunk-mcp -n splunk-mcp
+
+# Port forward for testing
+kubectl port-forward svc/splunk-mcp-service 8334:8334 -n splunk-mcp
+kubectl port-forward svc/splunk-mcp-metrics 9090:9090 -n splunk-mcp
 ```
 
 ## 📊 Environment Variables
@@ -168,11 +210,11 @@ python -c "from config.monitoring import HealthChecker; print(HealthChecker().ge
 3. **Configure Redis clustering** for high availability
 4. **Set up monitoring** and alerting
 
-### Medium-term Improvements
-1. **Add Prometheus metrics** integration
-2. **Implement distributed tracing**
-3. **Add log aggregation**
-4. **Create automated deployment scripts**
+### Medium-term Improvements - ✅ COMPLETED
+1. **✅ Add Prometheus metrics** integration - Complete with comprehensive metrics collection
+2. **✅ Implement Kubernetes deployment** - Complete with full K8s manifests and deployment scripts
+3. **Add distributed tracing** - Next phase
+4. **Add log aggregation** - Next phase
 
 ### Long-term Enhancements
 1. **Add Kubernetes deployment manifests**
