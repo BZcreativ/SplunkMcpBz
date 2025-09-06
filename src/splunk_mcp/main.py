@@ -760,8 +760,27 @@ async def handle_tools_list(user_data: Dict[str, Any]) -> dict:
     """Handle tools/list request"""
     tools = []
     
+    # FastMCP version compatibility fix - use hardcoded tool list
+    available_tools = [
+        "mcp_health_check",
+        "list_indexes",
+        "splunk_search",
+        "get_itsi_services",
+        "get_itsi_service_health",
+        "get_itsi_kpis",
+        "get_itsi_alerts",
+        "get_itsi_entities",
+        "get_itsi_entity_types",
+        "get_itsi_glass_tables",
+        "get_itsi_service_analytics",
+        "get_itsi_deep_dives",
+        "get_itsi_home_views",
+        "get_itsi_kpi_templates",
+        "get_itsi_notable_events"
+    ]
+    
     # Get all registered MCP tools
-    for tool_name in mcp._tools.keys():
+    for tool_name in available_tools:
         # Check if user has permission for this tool
         if tool_name == "list_indexes" and not check_permission('read:search'):
             continue
