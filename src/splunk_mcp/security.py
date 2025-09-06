@@ -20,7 +20,8 @@ class SecurityConfig:
     """Security configuration management"""
     
     def __init__(self):
-        self.secret_key = os.getenv('SECRET_KEY', Fernet.generate_key())
+        # Fix: Use JWT_SECRET_KEY instead of SECRET_KEY for consistency
+        self.secret_key = os.getenv('JWT_SECRET_KEY', 'your-secret-key-here')
         self.token_expiry_hours = int(os.getenv('TOKEN_EXPIRY_HOURS', '24'))
         self.max_requests_per_minute = int(os.getenv('MAX_REQUESTS_PER_MINUTE', '100'))
         self.ssl_verify = os.getenv('VERIFY_SSL', 'false').lower() == 'true'
