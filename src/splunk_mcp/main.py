@@ -583,7 +583,7 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(sec
     return {"access_token": new_token, "token_type": "bearer"}
 
 @api_router.get("/auth/me")
-async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user_context)):
     """Get current user information"""
     return {
         "user_id": current_user['user_id'],
@@ -593,7 +593,7 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
     }
 
 @api_router.get("/metrics")
-async def get_metrics_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+async def get_metrics_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_context)):
     """Get system metrics (requires admin role)"""
     if not security_middleware.authorize_request(current_user, 'read:*'):
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -616,7 +616,7 @@ async def health_check_endpoint():
     }
 
 @api_router.get("/redis/cache/stats")
-async def get_cache_stats(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+async def get_cache_stats(current_user: Dict[str, Any] = Depends(get_current_user_context)):
     """Get Redis cache statistics (requires admin role)"""
     if not security_middleware.authorize_request(current_user, 'read:*'):
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -624,7 +624,7 @@ async def get_cache_stats(current_user: Dict[str, Any] = Depends(get_current_use
     return redis_manager.get_cache_stats()
 
 @api_router.post("/redis/cache/clear")
-async def clear_cache(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+async def clear_cache(current_user: Dict[str, Any] = Depends(get_current_user_context)):
     """Clear Redis cache (requires admin role)"""
     if not security_middleware.authorize_request(current_user, 'write:*'):
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -633,7 +633,7 @@ async def clear_cache(current_user: Dict[str, Any] = Depends(get_current_user_fr
     return {"message": "Cache cleared successfully"}
 
 @api_router.get("/test-splunk-connection")
-async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_context)):
     """Test Splunk connection (requires read:search permission)"""
     if not security_middleware.authorize_request(current_user, 'read:search'):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
