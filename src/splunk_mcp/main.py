@@ -823,31 +823,54 @@ async def handle_tools_call(user_data: Dict[str, Any], params: dict) -> dict:
     
     # Execute the tool
     try:
-        # Get the tool function from globals (this should work for FastMCP decorated functions)
-        tool_func = globals().get(tool_name)
-        if not tool_func:
-            raise ValueError(f"Tool {tool_name} not found")
-        
-        # Execute with proper arguments based on tool name
+        # Execute tools directly by calling the function by name
+        # The functions are decorated with @mcp.tool() but should still be callable
         if tool_name == "splunk_search":
-            result = await tool_func(
+            result = await splunk_search(
                 query=tool_args.get("query", "*"),
                 earliest_time=tool_args.get("earliest_time", "-24h"),
                 latest_time=tool_args.get("latest_time", "now"),
                 output_mode=tool_args.get("output_mode", "json"),
                 use_cache=tool_args.get("use_cache", True)
             )
-        elif tool_name in ["get_itsi_services", "get_itsi_kpis", "get_itsi_alerts"]:
-            result = await tool_func(
+        elif tool_name == "get_itsi_services":
+            result = await get_itsi_services(
+                service_name=tool_args.get("service_name")
+            )
+        elif tool_name == "get_itsi_kpis":
+            result = await get_itsi_kpis(
+                service_name=tool_args.get("service_name")
+            )
+        elif tool_name == "get_itsi_alerts":
+            result = await get_itsi_alerts(
                 service_name=tool_args.get("service_name")
             )
         elif tool_name == "get_itsi_service_health":
-            result = await tool_func(
+            result = await get_itsi_service_health(
                 service_name=tool_args.get("service_name", "")
             )
+        elif tool_name == "mcp_health_check":
+            result = await mcp_health_check()
+        elif tool_name == "list_indexes":
+            result = await list_indexes()
+        elif tool_name == "get_itsi_entities":
+            result = await get_itsi_entities()
+        elif tool_name == "get_itsi_entity_types":
+            result = await get_itsi_entity_types()
+        elif tool_name == "get_itsi_glass_tables":
+            result = await get_itsi_glass_tables()
+        elif tool_name == "get_itsi_service_analytics":
+            result = await get_itsi_service_analytics()
+        elif tool_name == "get_itsi_deep_dives":
+            result = await get_itsi_deep_dives()
+        elif tool_name == "get_itsi_home_views":
+            result = await get_itsi_home_views()
+        elif tool_name == "get_itsi_kpi_templates":
+            result = await get_itsi_kpi_templates()
+        elif tool_name == "get_itsi_notable_events":
+            result = await get_itsi_notable_events()
         else:
-            # For tools without parameters (like mcp_health_check, list_indexes)
-            result = await tool_func()
+            raise ValueError(f"Tool {tool_name} not supported")
         
         # Format result according to MCP specification
         if isinstance(result, (list, dict)):
