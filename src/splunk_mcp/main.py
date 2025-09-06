@@ -659,6 +659,9 @@ async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends
             "error": str(e)
         }
 
+# Create dedicated MCP router with security
+mcp_router = APIRouter()
+
 # --- MCP HTTP Handler - JSON-RPC 2.0 Compliant ---
 @mcp_router.post("/")
 async def handle_mcp_request(request: Request):
@@ -993,6 +996,9 @@ async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends
 
 # Mount API router with proper path handling
 root_app.include_router(api_router, prefix="/api")
+
+# Mount MCP router with proper path handling
+root_app.include_router(mcp_router, prefix="/mcp")
 
 # --- Main Execution ---
 if __name__ == "__main__":
