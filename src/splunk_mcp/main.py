@@ -994,6 +994,9 @@ async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends
             "error": str(e)
         }
 
+# Create FastAPI app
+root_app = FastAPI(title="Splunk MCP Server", version="1.0.0")
+
 # Mount API router with proper path handling
 root_app.include_router(api_router, prefix="/api")
 
