@@ -234,9 +234,95 @@ def check_permission(permission: str) -> bool:
     return security_middleware.authorize_request(user_data, permission)
 
 # Core Functions - Used for internal execution (not decorated)
+# These must be defined before handle_tools_call function
+
 async def _mcp_health_check_core() -> dict:
     """Core health check function"""
     return {"status": "ok", "services": ["splunk", "redis"]}
+
+async def _list_indexes_core() -> list:
+    """Core function to list Splunk indexes"""
+    if not check_permission('read:search'):
+        raise SplunkQueryError("Insufficient permissions: read:search required")
+    
+    try:
+        indexes = get_splunk_service().indexes
+        return [idx.name for idx in indexes] if indexes else []
+    except Exception as e:
+        logger.error(f"Error listing indexes: {e}")
+        raise SplunkQueryError(f"Failed to list indexes: {str(e)}")
+
+async def _splunk_search_core(
+    query: str,
+    earliest_time: str = "-24h",
+    latest_time: str = "now",
+    output_mode: str = "json",
+    use_cache: bool = True
+) -> dict:
+    """Core function to execute Splunk search"""
+    if not check_permission('read:search'):
+        raise SplunkQueryError("Insufficient permissions: read:search required")
+    
+    # Validate query for security
+    is_valid, error_msg = security_validator.validate_splunk_query(query)
+    if not is_valid:
+        raise SplunkQueryError(f"Invalid query: {error_msg}")
+    
+    # Create cache key
+    cache_key = f"{query}:{earliest_time}:{latest_time}:{output_mode}"
+    
+    # Check cache if enabled
+    if use_cache:
+        cached_result = redis_manager.get_cached_query(cache_key)
+        if cached_result:
+            logger.info("Returning cached search results")
+            return cached_result
+    
+    from .search_helper import execute_splunk_search
+    try:
+        result = await execute_splunk_search(
+            query,
+            earliest_time=earliest_time,
+            latest_time=latest_time,
+            output_mode=output_mode
+        )
+        
+        # Cache the result
+        if use_cache:
+            redis_manager.cache_query(cache_key, result, ttl=300)
+        
+        return result
+    except SplunkQueryError as e:
+        logger.error(f"Splunk search failed for query '{query}': {e}")
+        raise
+
+async def _get_itsi_services_core(service_name: Optional[str] = None) -> list:
+    """Core function to get ITSI services"""
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
+    
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_services(service_name)
+    except Exception as e:
+        logger.error(f"Error getting ITSI services: {e}")
+        raise SplunkQueryError(f"Failed to get ITSI services: {str(e)}")
+
+async def _get_itsi_service_health_core(service_name: str) -> dict:
+    """Core function to get ITSI service health"""
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
+    
+    from .itsi_helper import ITSIHelper
+    try:
+        service = get_splunk_service()
+        itsi_helper = ITSIHelper(service)
+        return itsi_helper.get_service_health(service_name)
+    except Exception as e:
+        logger.error(f"Error getting ITSI service health: {e}")
+        raise SplunkQueryError(f"Failed to get ITSI service health: {str(e)}")
 
 # MCP Tools - FIXED VERSION (without FastAPI dependencies)
 @mcp.tool()
