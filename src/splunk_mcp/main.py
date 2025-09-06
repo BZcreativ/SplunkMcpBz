@@ -233,15 +233,19 @@ def check_permission(permission: str) -> bool:
         return False
     return security_middleware.authorize_request(user_data, permission)
 
+# Core Functions - Used for internal execution (not decorated)
+async def _mcp_health_check_core() -> dict:
+    """Core health check function"""
+    return {"status": "ok", "services": ["splunk", "redis"]}
+
 # MCP Tools - FIXED VERSION (without FastAPI dependencies)
 @mcp.tool()
 async def mcp_health_check() -> dict:
     """Health check for MCP server"""
-    return {"status": "ok", "services": ["splunk", "redis"]}
+    return await _mcp_health_check_core()
 
-@mcp.tool()
-async def list_indexes() -> list:
-    """List Splunk indexes (requires read:search permission)"""
+async def _list_indexes_core() -> list:
+    """Core function to list Splunk indexes"""
     if not check_permission('read:search'):
         raise SplunkQueryError("Insufficient permissions: read:search required")
     
@@ -253,6 +257,11 @@ async def list_indexes() -> list:
         raise SplunkQueryError(f"Failed to list indexes: {str(e)}")
 
 @mcp.tool()
+async def list_indexes() -> list:
+    """List Splunk indexes (requires read:search permission)"""
+    return await _list_indexes_core()
+
+@mcp.tool()
 async def splunk_search(
     query: str,
     earliest_time: str = "-24h",
@@ -260,7 +269,7 @@ async def splunk_search(
     output_mode: str = "json",
     use_cache: bool = True
 ) -> dict:
-    """Execute a Splunk search query and return results (requires read:search permission)"""
+    """Core function to execute Splunk search"""
     if not check_permission('read:search'):
         raise SplunkQueryError("Insufficient permissions: read:search required")
     
@@ -298,8 +307,18 @@ async def splunk_search(
         raise
 
 @mcp.tool()
-async def get_itsi_services(service_name: Optional[str] = None) -> list:
-    """Get ITSI services (requires read:itsi permission)"""
+async def splunk_search(
+    query: str,
+    earliest_time: str = "-24h",
+    latest_time: str = "now",
+    output_mode: str = "json",
+    use_cache: bool = True
+) -> dict:
+    """Execute a Splunk search query and return results (requires read:search permission)"""
+    return await _splunk_search_core(query, earliest_time, latest_time, output_mode, use_cache)
+
+async def _get_itsi_services_core(service_name: Optional[str] = None) -> list:
+    """Core function to get ITSI services"""
     if not check_permission('read:itsi'):
         raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
@@ -313,8 +332,12 @@ async def get_itsi_services(service_name: Optional[str] = None) -> list:
         raise SplunkQueryError(f"Failed to get ITSI services: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_service_health(service_name: str) -> dict:
-    """Get health status for a specific ITSI service (requires read:itsi permission)"""
+async def get_itsi_services(service_name: Optional[str] = None) -> list:
+    """Get ITSI services (requires read:itsi permission)"""
+    return await _get_itsi_services_core(service_name)
+
+async def _get_itsi_service_health_core(service_name: str) -> dict:
+    """Core function to get ITSI service health"""
     if not check_permission('read:itsi'):
         raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
@@ -326,6 +349,11 @@ async def get_itsi_service_health(service_name: str) -> dict:
     except Exception as e:
         logger.error(f"Error getting ITSI service health: {e}")
         raise SplunkQueryError(f"Failed to get ITSI service health: {str(e)}")
+
+@mcp.tool()
+async def get_itsi_service_health(service_name: str) -> dict:
+    """Get health status for a specific ITSI service (requires read:itsi permission)"""
+    return await _get_itsi_service_health_core(service_name)
 
 @mcp.tool()
 async def get_itsi_kpis(service_name: Optional[str] = None) -> list:
@@ -823,10 +851,9 @@ async def handle_tools_call(user_data: Dict[str, Any], params: dict) -> dict:
     
     # Execute the tool
     try:
-        # Execute tools directly by calling the function by name
-        # The functions are decorated with @mcp.tool() but should still be callable
+        # Execute tools using core functions (bypassing FastMCP FunctionTool wrapper)
         if tool_name == "splunk_search":
-            result = await splunk_search(
+            result = await _splunk_search_core(
                 query=tool_args.get("query", "*"),
                 earliest_time=tool_args.get("earliest_time", "-24h"),
                 latest_time=tool_args.get("latest_time", "now"),
@@ -834,41 +861,51 @@ async def handle_tools_call(user_data: Dict[str, Any], params: dict) -> dict:
                 use_cache=tool_args.get("use_cache", True)
             )
         elif tool_name == "get_itsi_services":
-            result = await get_itsi_services(
+            result = await _get_itsi_services_core(
                 service_name=tool_args.get("service_name")
             )
         elif tool_name == "get_itsi_kpis":
-            result = await get_itsi_kpis(
+            result = await _get_itsi_kpis_core(
                 service_name=tool_args.get("service_name")
             )
         elif tool_name == "get_itsi_alerts":
-            result = await get_itsi_alerts(
+            result = await _get_itsi_alerts_core(
                 service_name=tool_args.get("service_name")
             )
         elif tool_name == "get_itsi_service_health":
-            result = await get_itsi_service_health(
+            result = await _get_itsi_service_health_core(
                 service_name=tool_args.get("service_name", "")
             )
         elif tool_name == "mcp_health_check":
-            result = await mcp_health_check()
+            result = await _mcp_health_check_core()
         elif tool_name == "list_indexes":
-            result = await list_indexes()
+            result = await _list_indexes_core()
         elif tool_name == "get_itsi_entities":
-            result = await get_itsi_entities()
+            result = await _get_itsi_entities_core(
+                service_name=tool_args.get("service_name")
+            )
         elif tool_name == "get_itsi_entity_types":
-            result = await get_itsi_entity_types()
+            result = await _get_itsi_entity_types_core()
         elif tool_name == "get_itsi_glass_tables":
-            result = await get_itsi_glass_tables()
+            result = await _get_itsi_glass_tables_core()
         elif tool_name == "get_itsi_service_analytics":
-            result = await get_itsi_service_analytics()
+            result = await _get_itsi_service_analytics_core(
+                service_name=tool_args.get("service_name", ""),
+                time_range=tool_args.get("time_range", "-24h")
+            )
         elif tool_name == "get_itsi_deep_dives":
-            result = await get_itsi_deep_dives()
+            result = await _get_itsi_deep_dives_core(
+                service_name=tool_args.get("service_name")
+            )
         elif tool_name == "get_itsi_home_views":
-            result = await get_itsi_home_views()
+            result = await _get_itsi_home_views_core()
         elif tool_name == "get_itsi_kpi_templates":
-            result = await get_itsi_kpi_templates()
+            result = await _get_itsi_kpi_templates_core()
         elif tool_name == "get_itsi_notable_events":
-            result = await get_itsi_notable_events()
+            result = await _get_itsi_notable_events_core(
+                service_name=tool_args.get("service_name"),
+                time_range=tool_args.get("time_range", "-24h")
+            )
         else:
             raise ValueError(f"Tool {tool_name} not supported")
         
