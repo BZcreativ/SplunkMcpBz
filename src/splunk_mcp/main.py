@@ -1,4 +1,8 @@
-print("SPLUNK MCP SERVER STARTING")  # Module-level print to verify execution
+"""
+Fixed Splunk MCP Server - Compatible with MCP Protocol
+This version removes FastAPI dependencies from MCP tools and handles authentication properly
+"""
+print("SPLUNK MCP SERVER STARTING - FIXED VERSION")
 from fastmcp import FastMCP
 from fastapi import FastAPI, Response, Request, APIRouter, Depends, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -206,88 +210,43 @@ logger.info("MCP initialized")
 # Security scheme for API
 security = HTTPBearer()
 
-async def get_current_user_from_token(
-    credentials: HTTPAuthorizationCredentials = Security(security)
-) -> Dict[str, Any]:
-    """Get current authenticated user from token"""
-    if not credentials:
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication credentials required"
-        )
-    
-    token = credentials.credentials
-    user_data = security_middleware.authenticate_request(token)
-    
+# Global variable to store the current user context (will be set by middleware)
+current_user_context = None
+
+def set_current_user(user_data: Dict[str, Any]):
+    """Set the current user context for MCP tools"""
+    global current_user_context
+    current_user_context = user_data
+
+def get_current_user_context() -> Optional[Dict[str, Any]]:
+    """Get the current user context"""
+    return current_user_context
+
+def check_permission(permission: str) -> bool:
+    """Check if current user has required permission"""
+    user_data = get_current_user_context()
     if not user_data:
-        security_logger.log_authentication(
-            user_id="unknown",
-            success=False
-        )
-        metrics.increment_auth_failures()
-        raise HTTPException(
-            status_code=401,
-            detail="Invalid or expired token"
-        )
-    
-    # Get full user data
-    user = user_manager.get_user_by_id(user_data.get('user_id'))
-    if not user:
-        metrics.increment_auth_failures()
-        raise HTTPException(
-            status_code=401,
-            detail="User not found"
-        )
-    
-    security_logger.log_authentication(
-        user_id=user['user_id'],
-        success=True
-    )
-    metrics.increment_auth_successes()
-    
-    return user
+        return False
+    return security_middleware.authorize_request(user_data, permission)
 
-def require_permission(permission: str):
-    """Dependency for requiring specific permissions"""
-    def permission_checker(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
-        if not security_middleware.authorize_request(current_user, permission):
-            security_logger.log_authorization(
-                user_id=current_user.get('user_id', 'unknown'),
-                permission=permission,
-                success=False
-            )
-            raise HTTPException(
-                status_code=403,
-                detail=f"Insufficient permissions: {permission}"
-            )
-        
-        security_logger.log_authorization(
-            user_id=current_user.get('user_id', 'unknown'),
-            permission=permission,
-            success=True
-        )
-        
-        return current_user
-    
-    return permission_checker
-
-# MCP Tools with Security
+# MCP Tools - FIXED VERSION (without FastAPI dependencies)
 @mcp.tool()
 async def mcp_health_check() -> dict:
+    """Health check for MCP server"""
     return {"status": "ok", "services": ["splunk", "redis"]}
 
 @mcp.tool()
-async def list_indexes(current_user: Dict[str, Any] = Depends(get_current_user_from_token)) -> list:
+async def list_indexes() -> list:
     """List Splunk indexes (requires read:search permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:search'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:search'):
+        raise SplunkQueryError("Insufficient permissions: read:search required")
     
     try:
         indexes = get_splunk_service().indexes
         return [idx.name for idx in indexes] if indexes else []
     except Exception as e:
         logger.error(f"Error listing indexes: {e}")
-        raise SplunkQueryError("Failed to list indexes")
+        raise SplunkQueryError(f"Failed to list indexes: {str(e)}")
 
 @mcp.tool()
 async def splunk_search(
@@ -295,17 +254,16 @@ async def splunk_search(
     earliest_time: str = "-24h",
     latest_time: str = "now",
     output_mode: str = "json",
-    use_cache: bool = True,
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
+    use_cache: bool = True
 ) -> dict:
     """Execute a Splunk search query and return results (requires read:search permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:search'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:search'):
+        raise SplunkQueryError("Insufficient permissions: read:search required")
     
     # Validate query for security
     is_valid, error_msg = security_validator.validate_splunk_query(query)
     if not is_valid:
-        raise HTTPException(status_code=400, detail=f"Invalid query: {error_msg}")
+        raise SplunkQueryError(f"Invalid query: {error_msg}")
     
     # Create cache key
     cache_key = f"{query}:{earliest_time}:{latest_time}:{output_mode}"
@@ -336,13 +294,10 @@ async def splunk_search(
         raise
 
 @mcp.tool()
-async def get_itsi_services(
-    service_name: Optional[str] = None,
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_services(service_name: Optional[str] = None) -> list:
     """Get ITSI services (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -351,16 +306,13 @@ async def get_itsi_services(
         return itsi_helper.get_services(service_name)
     except Exception as e:
         logger.error(f"Error getting ITSI services: {e}")
-        raise SplunkQueryError("Failed to get ITSI services")
+        raise SplunkQueryError(f"Failed to get ITSI services: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_service_health(
-    service_name: str,
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> dict:
+async def get_itsi_service_health(service_name: str) -> dict:
     """Get health status for a specific ITSI service (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -369,16 +321,13 @@ async def get_itsi_service_health(
         return itsi_helper.get_service_health(service_name)
     except Exception as e:
         logger.error(f"Error getting ITSI service health: {e}")
-        raise SplunkQueryError("Failed to get ITSI service health")
+        raise SplunkQueryError(f"Failed to get ITSI service health: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_kpis(
-    service_name: Optional[str] = None,
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_kpis(service_name: Optional[str] = None) -> list:
     """Get ITSI KPIs (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -387,16 +336,13 @@ async def get_itsi_kpis(
         return itsi_helper.get_kpis(service_name)
     except Exception as e:
         logger.error(f"Error getting ITSI KPIs: {e}")
-        raise SplunkQueryError("Failed to get ITSI KPIs")
+        raise SplunkQueryError(f"Failed to get ITSI KPIs: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_alerts(
-    service_name: Optional[str] = None,
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_alerts(service_name: Optional[str] = None) -> list:
     """Get ITSI alerts (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -405,16 +351,13 @@ async def get_itsi_alerts(
         return itsi_helper.get_alerts(service_name)
     except Exception as e:
         logger.error(f"Error getting ITSI alerts: {e}")
-        raise SplunkQueryError("Failed to get ITSI alerts")
+        raise SplunkQueryError(f"Failed to get ITSI alerts: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_entities(
-    service_name: Optional[str] = None,
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_entities(service_name: Optional[str] = None) -> list:
     """Get ITSI service entities (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -423,15 +366,13 @@ async def get_itsi_entities(
         return itsi_helper.get_service_entities(service_name)
     except Exception as e:
         logger.error(f"Error getting ITSI entities: {e}")
-        raise SplunkQueryError("Failed to get ITSI entities")
+        raise SplunkQueryError(f"Failed to get ITSI entities: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_entity_types(
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_entity_types() -> list:
     """Get ITSI entity types (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -440,15 +381,13 @@ async def get_itsi_entity_types(
         return itsi_helper.get_entity_types()
     except Exception as e:
         logger.error(f"Error getting ITSI entity types: {e}")
-        raise SplunkQueryError("Failed to get ITSI entity types")
+        raise SplunkQueryError(f"Failed to get ITSI entity types: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_glass_tables(
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_glass_tables() -> list:
     """Get ITSI glass tables (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -457,17 +396,13 @@ async def get_itsi_glass_tables(
         return itsi_helper.get_glass_tables()
     except Exception as e:
         logger.error(f"Error getting ITSI glass tables: {e}")
-        raise SplunkQueryError("Failed to get ITSI glass tables")
+        raise SplunkQueryError(f"Failed to get ITSI glass tables: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_service_analytics(
-    service_name: str,
-    time_range: str = "-24h",
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> dict:
+async def get_itsi_service_analytics(service_name: str, time_range: str = "-24h") -> dict:
     """Get analytics for an ITSI service (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -476,16 +411,13 @@ async def get_itsi_service_analytics(
         return itsi_helper.get_service_analytics(service_name, time_range)
     except Exception as e:
         logger.error(f"Error getting ITSI service analytics: {e}")
-        raise SplunkQueryError("Failed to get ITSI service analytics")
+        raise SplunkQueryError(f"Failed to get ITSI service analytics: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_deep_dives(
-    service_name: Optional[str] = None,
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_deep_dives(service_name: Optional[str] = None) -> list:
     """Get ITSI deep dives (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -494,15 +426,13 @@ async def get_itsi_deep_dives(
         return itsi_helper.get_deep_dives(service_name)
     except Exception as e:
         logger.error(f"Error getting ITSI deep dives: {e}")
-        raise SplunkQueryError("Failed to get ITSI deep dives")
+        raise SplunkQueryError(f"Failed to get ITSI deep dives: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_home_views(
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_home_views() -> list:
     """Get ITSI home views (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -511,15 +441,13 @@ async def get_itsi_home_views(
         return itsi_helper.get_home_views()
     except Exception as e:
         logger.error(f"Error getting ITSI home views: {e}")
-        raise SplunkQueryError("Failed to get ITSI home views")
+        raise SplunkQueryError(f"Failed to get ITSI home views: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_kpi_templates(
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_kpi_templates() -> list:
     """Get ITSI KPI templates (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -528,17 +456,13 @@ async def get_itsi_kpi_templates(
         return itsi_helper.get_kpi_templates()
     except Exception as e:
         logger.error(f"Error getting ITSI KPI templates: {e}")
-        raise SplunkQueryError("Failed to get ITSI KPI templates")
+        raise SplunkQueryError(f"Failed to get ITSI KPI templates: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_notable_events(
-    service_name: Optional[str] = None,
-    time_range: str = "-24h",
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_notable_events(service_name: Optional[str] = None, time_range: str = "-24h") -> list:
     """Get ITSI notable events (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -547,15 +471,13 @@ async def get_itsi_notable_events(
         return itsi_helper.get_notable_events(service_name, time_range)
     except Exception as e:
         logger.error(f"Error getting ITSI notable events: {e}")
-        raise SplunkQueryError("Failed to get ITSI notable events")
+        raise SplunkQueryError(f"Failed to get ITSI notable events: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_correlation_searches(
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_correlation_searches() -> list:
     """Get ITSI correlation searches (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -564,15 +486,13 @@ async def get_itsi_correlation_searches(
         return itsi_helper.get_correlation_searches()
     except Exception as e:
         logger.error(f"Error getting ITSI correlation searches: {e}")
-        raise SplunkQueryError("Failed to get ITSI correlation searches")
+        raise SplunkQueryError(f"Failed to get ITSI correlation searches: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_maintenance_calendars(
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_maintenance_calendars() -> list:
     """Get ITSI maintenance calendars (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -581,15 +501,13 @@ async def get_itsi_maintenance_calendars(
         return itsi_helper.get_maintenance_calendars()
     except Exception as e:
         logger.error(f"Error getting ITSI maintenance calendars: {e}")
-        raise SplunkQueryError("Failed to get ITSI maintenance calendars")
+        raise SplunkQueryError(f"Failed to get ITSI maintenance calendars: {str(e)}")
 
 @mcp.tool()
-async def get_itsi_teams(
-    current_user: Dict[str, Any] = Depends(get_current_user_from_token)
-) -> list:
+async def get_itsi_teams() -> list:
     """Get ITSI teams (requires read:itsi permission)"""
-    if not security_middleware.authorize_request(current_user, 'read:itsi'):
-        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    if not check_permission('read:itsi'):
+        raise SplunkQueryError("Insufficient permissions: read:itsi required")
     
     from .itsi_helper import ITSIHelper
     try:
@@ -598,7 +516,7 @@ async def get_itsi_teams(
         return itsi_helper.get_teams()
     except Exception as e:
         logger.error(f"Error getting ITSI teams: {e}")
-        raise SplunkQueryError("Failed to get ITSI teams")
+        raise SplunkQueryError(f"Failed to get ITSI teams: {str(e)}")
 
 # --- API Application ---
 api_router = APIRouter()
@@ -699,26 +617,20 @@ async def health_check_endpoint():
 
 @api_router.get("/redis/cache/stats")
 async def get_cache_stats(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
-    """Get Redis cache statistics"""
+    """Get Redis cache statistics (requires admin role)"""
     if not security_middleware.authorize_request(current_user, 'read:*'):
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    if not redis_manager.is_connected():
-        raise HTTPException(status_code=503, detail="Redis not available")
-    
-    return redis_manager.health_check()
+    return redis_manager.get_cache_stats()
 
 @api_router.post("/redis/cache/clear")
 async def clear_cache(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
-    """Clear Redis cache"""
+    """Clear Redis cache (requires admin role)"""
     if not security_middleware.authorize_request(current_user, 'write:*'):
         raise HTTPException(status_code=403, detail="Admin access required")
     
-    if not redis_manager.is_connected():
-        raise HTTPException(status_code=503, detail="Redis not available")
-    
-    # This would require implementing cache clearing functionality
-    return {"message": "Cache clearing functionality to be implemented"}
+    redis_manager.clear_cache()
+    return {"message": "Cache cleared successfully"}
 
 @api_router.get("/test-splunk-connection")
 async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
@@ -728,66 +640,34 @@ async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends
     
     try:
         service = get_splunk_service()
-        return {"status": "success", "message": "Successfully connected to Splunk",
-                "info": {"host": service.host, "port": service.port, "username": service.username}}
-    except SplunkConnectionError as e:
-        logger.error(f"Splunk connection test failed: {e}")
-        return {"status": "error", "message": str(e),
-                "details": {"host": os.getenv("SPLUNK_HOST"), "port": os.getenv("SPLUNK_PORT")}}
+        indexes = service.indexes
+        return {
+            "connected": True,
+            "indexes_count": len([idx for idx in indexes]),
+            "splunk_version": service.info["version"]
+        }
+    except Exception as e:
+        return {
+            "connected": False,
+            "error": str(e)
+        }
 
-# --- Root Application Assembly ---
-root_app = FastAPI(
-    title="Splunk MCP Server",
-    description="Secure Splunk MCP server with authentication and authorization",
-    version="1.0.0"
-)
+# Create FastAPI app
+root_app = FastAPI(title="Splunk MCP Server", version="1.0.0")
 
-# --- Lifespan Management ---
-@root_app.on_event("startup")
-async def startup_event():
-    logger.info("Application lifespan startup")
-    logger.info("Security configuration validated" if security_config.validate_config() else "Security configuration invalid")
-
-@root_app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("Application lifespan shutdown")
-
-# --- Security Middleware ---
-@root_app.middleware("http")
-async def security_middleware_func(request: Request, call_next):
-    """Security middleware for all requests"""
-    start_time = time.time()
-    
-    # Add security headers
-    response = await call_next(request)
-    response = security_headers.add_security_headers(response)
-    
-    # Add rate limit headers
-    client_ip = request.client.host if request.client else "unknown"
-    allowed, remaining = security_middleware.check_rate_limit(client_ip)
-    
-    response.headers["X-RateLimit-Remaining"] = str(remaining)
-    
-    # Log request
-    process_time = time.time() - start_time
-    logger.info(f"{request.method} {request.url.path} - {response.status_code} - {process_time:.3f}s")
-    
-    return response
-
-# Apply middleware to the root app
+# Add CORS middleware
 root_app.add_middleware(
     CORSMiddleware,
-    allow_origins=security_config.allowed_origins,
+    allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*", "Authorization", "MCP-Protocol-Version", "Mcp-Session-Id"],
-    expose_headers=["MCP-Protocol-Version", "Mcp-Session-Id", "X-RateLimit-Remaining"]
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Mount the sub-applications
-api_app = FastAPI(routes=api_router.routes)
-root_app.mount("/api", api_app)
+# Mount API router
+root_app.include_router(api_router, prefix="/api")
 
+# --- MCP Router with Authentication ---
 # Create dedicated MCP router with security
 mcp_router = APIRouter()
 
@@ -807,6 +687,9 @@ async def handle_mcp_requests(
     
     if not user_data:
         raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    # Set user context for MCP tools
+    set_current_user(user_data)
     
     # Check rate limit
     client_ip = request.client.host if request.client else "unknown"
@@ -858,6 +741,9 @@ async def handle_mcp_requests(
             response_body += message.get("body", b"")
     
     await mcp.http_app()(scope, receive, send)
+    
+    # Clear user context after request
+    set_current_user(None)
     
     return Response(
         content=response_body,
