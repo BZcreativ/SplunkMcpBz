@@ -823,13 +823,13 @@ async def handle_tools_call(user_data: Dict[str, Any], params: dict) -> dict:
     
     # Execute the tool
     try:
-        # Get the tool function
+        # Get the tool function from globals (this should work for FastMCP decorated functions)
         tool_func = globals().get(tool_name)
         if not tool_func:
             raise ValueError(f"Tool {tool_name} not found")
         
-        # Execute with proper arguments
-        if tool_name in ["splunk_search"]:
+        # Execute with proper arguments based on tool name
+        if tool_name == "splunk_search":
             result = await tool_func(
                 query=tool_args.get("query", "*"),
                 earliest_time=tool_args.get("earliest_time", "-24h"),
@@ -841,12 +841,12 @@ async def handle_tools_call(user_data: Dict[str, Any], params: dict) -> dict:
             result = await tool_func(
                 service_name=tool_args.get("service_name")
             )
-        elif tool_name in ["get_itsi_service_health"]:
+        elif tool_name == "get_itsi_service_health":
             result = await tool_func(
                 service_name=tool_args.get("service_name", "")
             )
         else:
-            # For tools without parameters
+            # For tools without parameters (like mcp_health_check, list_indexes)
             result = await tool_func()
         
         # Format result according to MCP specification
