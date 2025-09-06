@@ -1,16 +1,18 @@
 """
-Fixed Splunk MCP Server - Compatible with MCP Protocol
-This version removes FastAPI dependencies from MCP tools and handles authentication properly
+Splunk MCP Server - Fixed Version with Proper HTTP Routing
+This version implements JSON-RPC 2.0 compliant MCP HTTP endpoints
 """
 print("SPLUNK MCP SERVER STARTING - FIXED VERSION")
 from fastmcp import FastMCP
 from fastapi import FastAPI, Response, Request, APIRouter, Depends, HTTPException, Security
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from pydantic import BaseModel
 import logging
 import os
+import json
 from typing import Optional, Dict, Any, List
 import time
 
@@ -217,6 +219,7 @@ def set_current_user(user_data: Dict[str, Any]):
     """Set the current user context for MCP tools"""
     global current_user_context
     current_user_context = user_data
+    logger.info(f"User context set: {user_data.get('user_id', 'unknown')}")
 
 def get_current_user_context() -> Optional[Dict[str, Any]]:
     """Get the current user context"""
@@ -226,6 +229,7 @@ def check_permission(permission: str) -> bool:
     """Check if current user has required permission"""
     user_data = get_current_user_context()
     if not user_data:
+        logger.warning("No user context available for permission check")
         return False
     return security_middleware.authorize_request(user_data, permission)
 
@@ -583,8 +587,11 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(sec
     return {"access_token": new_token, "token_type": "bearer"}
 
 @api_router.get("/auth/me")
-async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user_context)):
+async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
     """Get current user information"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+    
     return {
         "user_id": current_user['user_id'],
         "username": current_user['username'],
@@ -593,7 +600,7 @@ async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_curre
     }
 
 @api_router.get("/metrics")
-async def get_metrics_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_context)):
+async def get_metrics_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
     """Get system metrics (requires admin role)"""
     if not security_middleware.authorize_request(current_user, 'read:*'):
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -616,7 +623,7 @@ async def health_check_endpoint():
     }
 
 @api_router.get("/redis/cache/stats")
-async def get_cache_stats(current_user: Dict[str, Any] = Depends(get_current_user_context)):
+async def get_cache_stats(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
     """Get Redis cache statistics (requires admin role)"""
     if not security_middleware.authorize_request(current_user, 'read:*'):
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -624,7 +631,7 @@ async def get_cache_stats(current_user: Dict[str, Any] = Depends(get_current_use
     return redis_manager.get_cache_stats()
 
 @api_router.post("/redis/cache/clear")
-async def clear_cache(current_user: Dict[str, Any] = Depends(get_current_user_context)):
+async def clear_cache(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
     """Clear Redis cache (requires admin role)"""
     if not security_middleware.authorize_request(current_user, 'write:*'):
         raise HTTPException(status_code=403, detail="Admin access required")
@@ -633,7 +640,7 @@ async def clear_cache(current_user: Dict[str, Any] = Depends(get_current_user_co
     return {"message": "Cache cleared successfully"}
 
 @api_router.get("/test-splunk-connection")
-async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_context)):
+async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
     """Test Splunk connection (requires read:search permission)"""
     if not security_middleware.authorize_request(current_user, 'read:search'):
         raise HTTPException(status_code=403, detail="Insufficient permissions")
@@ -652,111 +659,340 @@ async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends
             "error": str(e)
         }
 
-# Create FastAPI app
-root_app = FastAPI(title="Splunk MCP Server", version="1.0.0")
+# --- MCP HTTP Handler - JSON-RPC 2.0 Compliant ---
+@mcp_router.post("/")
+async def handle_mcp_request(request: Request):
+    """Handle MCP JSON-RPC requests"""
+    try:
+        # Parse JSON-RPC request
+        body = await request.json()
+        
+        # Validate JSON-RPC format
+        if body.get("jsonrpc") != "2.0":
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32600, "message": "Invalid Request"},
+                    "id": body.get("id", None)
+                }
+            )
+        
+        # Get authenticated user from token
+        auth_header = request.headers.get("Authorization")
+        if not auth_header or not auth_header.startswith("Bearer "):
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32603, "message": "Authentication required"},
+                    "id": body.get("id", None)
+                }
+            )
+        
+        token = auth_header.split(" ")[1]
+        user_data = security_middleware.authenticate_request(token)
+        
+        if not user_data:
+            return JSONResponse(
+                status_code=401,
+                content={
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32603, "message": "Invalid token"},
+                    "id": body.get("id", None)
+                }
+            )
+        
+        # Set user context for authorization
+        set_current_user(user_data)
+        
+        # Route to appropriate handler
+        method = body.get("method")
+        params = body.get("params", {})
+        request_id = body.get("id")
+        
+        if method == "tools/list":
+            result = await handle_tools_list(user_data)
+        elif method == "tools/call":
+            result = await handle_tools_call(user_data, params)
+        else:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "jsonrpc": "2.0",
+                    "error": {"code": -32601, "message": "Method not found"},
+                    "id": request_id
+                }
+            )
+        
+        return JSONResponse(
+            content={
+                "jsonrpc": "2.0",
+                "result": result,
+                "id": request_id
+            }
+        )
+        
+    except json.JSONDecodeError:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "jsonrpc": "2.0",
+                "error": {"code": -32700, "message": "Parse error"},
+                "id": None
+            }
+        )
+    except Exception as e:
+        logger.error(f"MCP request error: {e}")
+        return JSONResponse(
+            status_code=500,
+            content={
+                "jsonrpc": "2.0",
+                "error": {"code": -32603, "message": "Internal error"},
+                "id": body.get("id", None) if 'body' in locals() else None
+            }
+        )
 
-# Add CORS middleware
-root_app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Mount API router
-root_app.include_router(api_router, prefix="/api")
-
-# --- MCP Router with Authentication ---
-# Create dedicated MCP router with security
-mcp_router = APIRouter()
-
-@mcp_router.api_route("/{path:path}", methods=["GET", "POST"])
-async def handle_mcp_requests(
-    request: Request, 
-    path: str,
-    credentials: HTTPAuthorizationCredentials = Security(security)
-):
-    """Handle MCP requests with authentication"""
-    # Authenticate request
-    if not credentials:
-        raise HTTPException(status_code=401, detail="Authentication required")
+async def handle_tools_list(user_data: Dict[str, Any]) -> dict:
+    """Handle tools/list request"""
+    tools = []
     
-    token = credentials.credentials
+    # Get all registered MCP tools
+    for tool_name in mcp._tools.keys():
+        # Check if user has permission for this tool
+        if tool_name == "list_indexes" and not check_permission('read:search'):
+            continue
+        elif tool_name == "splunk_search" and not check_permission('read:search'):
+            continue
+        elif tool_name.startswith("get_itsi_") and not check_permission('read:itsi'):
+            continue
+        
+        # Get tool function for description
+        tool_func = globals().get(tool_name)
+        description = tool_func.__doc__ if tool_func else ""
+        
+        tools.append({
+            "name": tool_name,
+            "description": description,
+            "inputSchema": {
+                "type": "object",
+                "properties": {},  # Simplified for now
+                "required": []
+            }
+        })
+    
+    return {"tools": tools}
+
+async def handle_tools_call(user_data: Dict[str, Any], params: dict) -> dict:
+    """Handle tools/call request"""
+    tool_name = params.get("name")
+    tool_args = params.get("arguments", {})
+    
+    if not tool_name:
+        raise ValueError("Tool name is required")
+    
+    # Check permission for the specific tool
+    if tool_name == "list_indexes" and not check_permission('read:search'):
+        raise PermissionError("Insufficient permissions for list_indexes")
+    elif tool_name == "splunk_search" and not check_permission('read:search'):
+        raise PermissionError("Insufficient permissions for splunk_search")
+    elif tool_name.startswith("get_itsi_") and not check_permission('read:itsi'):
+        raise PermissionError("Insufficient permissions for ITSI operations")
+    
+    # Execute the tool
+    try:
+        # Get the tool function
+        tool_func = globals().get(tool_name)
+        if not tool_func:
+            raise ValueError(f"Tool {tool_name} not found")
+        
+        # Execute with proper arguments
+        if tool_name in ["splunk_search"]:
+            result = await tool_func(
+                query=tool_args.get("query", "*"),
+                earliest_time=tool_args.get("earliest_time", "-24h"),
+                latest_time=tool_args.get("latest_time", "now"),
+                output_mode=tool_args.get("output_mode", "json"),
+                use_cache=tool_args.get("use_cache", True)
+            )
+        elif tool_name in ["get_itsi_services", "get_itsi_kpis", "get_itsi_alerts"]:
+            result = await tool_func(
+                service_name=tool_args.get("service_name")
+            )
+        elif tool_name in ["get_itsi_service_health"]:
+            result = await tool_func(
+                service_name=tool_args.get("service_name", "")
+            )
+        else:
+            # For tools without parameters
+            result = await tool_func()
+        
+        # Format result according to MCP specification
+        if isinstance(result, (list, dict)):
+            content = [{"type": "text", "text": json.dumps(result, default=str)}]
+        else:
+            content = [{"type": "text", "text": str(result)}]
+        
+        return {"content": content}
+        
+    except Exception as e:
+        logger.error(f"Tool execution error: {e}")
+        raise RuntimeError(f"Tool execution failed: {str(e)}")
+
+# Helper function to get authenticated user from request
+async def get_authenticated_user(request: Request) -> Dict[str, Any]:
+    """Extract and validate authenticated user from request"""
+    auth_header = request.headers.get("Authorization")
+    if not auth_header or not auth_header.startswith("Bearer "):
+        raise ValueError("Missing or invalid Authorization header")
+    
+    token = auth_header.split(" ")[1]
     user_data = security_middleware.authenticate_request(token)
     
     if not user_data:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        raise ValueError("Invalid or expired token")
     
-    # Set user context for MCP tools
-    set_current_user(user_data)
+    return user_data
+
+# --- API Application ---
+api_router = APIRouter()
+
+@api_router.post("/auth/login", response_model=TokenResponse)
+async def login(request: LoginRequest):
+    """Authenticate user and return access token"""
+    metrics.increment_auth_attempts()
+    
+    user = user_manager.authenticate_user(request.username, request.password)
+    if not user:
+        metrics.increment_auth_failures()
+        security_logger.log_authentication(
+            user_id=request.username,
+            success=False
+        )
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid username or password"
+        )
     
     # Check rate limit
-    client_ip = request.client.host if request.client else "unknown"
-    allowed, remaining = security_middleware.check_rate_limit(client_ip)
-    
+    allowed, remaining = security_middleware.check_rate_limit(user['user_id'])
     if not allowed:
+        security_logger.log_rate_limit(user_id=user['user_id'])
         raise HTTPException(
             status_code=429,
-            detail="Rate limit exceeded",
-            headers={"X-RateLimit-Remaining": str(remaining)}
+            detail="Rate limit exceeded"
         )
     
-    # Create proper ASGI scope for MCP
-    scope = {
-        "type": "http",
-        "method": request.method,
-        "path": f"/{path}" if path else "/",
-        "raw_path": f"/{path}".encode() if path else b"/",
-        "query_string": request.url.query.encode(),
-        "headers": [(k.lower().encode(), v.encode()) for k, v in request.headers.items()],
-        "client": request.client,
-        "server": request.url.hostname,
-        "scheme": request.url.scheme,
-        "root_path": "",
-        "app": root_app,
-        "state": {"user": user_data}
-    }
+    # Generate token
+    token = security_middleware.token_manager.generate_token(
+        user['user_id'],
+        user['roles'],
+        expires_in=security_config.token_expiry_hours
+    )
     
-    # Forward request to MCP app with proper ASGI call
-    async def receive():
-        if request.method == "POST":
-            body = await request.body()
-            return {
-                "type": "http.request",
-                "body": body,
-                "more_body": False
-            }
-        return {"type": "http.request"}
+    security_logger.log_authentication(
+        user_id=user['user_id'],
+        success=True
+    )
+    metrics.increment_auth_successes()
     
-    # Handle ASGI response
-    response_headers = []
-    response_body = b""
-    
-    async def send(message):
-        nonlocal response_headers, response_body
-        if message["type"] == "http.response.start":
-            response_headers = message["headers"]
-        elif message["type"] == "http.response.body":
-            response_body += message.get("body", b"")
-    
-    await mcp.http_app()(scope, receive, send)
-    
-    # Clear user context after request
-    set_current_user(None)
-    
-    return Response(
-        content=response_body,
-        status_code=200,
-        headers=dict(
-            (k.decode(), v.decode()) 
-            for k, v in response_headers
-            if k != b"content-length"
-        )
+    return TokenResponse(
+        access_token=token,
+        token_type="bearer",
+        expires_in=security_config.token_expiry_hours * 3600,
+        user_id=user['user_id'],
+        roles=user['roles']
     )
 
-# Mount MCP router with proper path handling
-root_app.include_router(mcp_router, prefix="/mcp")
+@api_router.post("/auth/refresh")
+async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(security)):
+    """Refresh access token"""
+    if not credentials:
+        raise HTTPException(status_code=401, detail="Token required")
+    
+    token = credentials.credentials
+    new_token = security_middleware.token_manager.refresh_token(token)
+    
+    if not new_token:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    return {"access_token": new_token, "token_type": "bearer"}
+
+@api_router.get("/auth/me")
+async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+    """Get current user information"""
+    if not current_user:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+    
+    return {
+        "user_id": current_user['user_id'],
+        "username": current_user['username'],
+        "roles": current_user['roles'],
+        "permissions": security_middleware.rbac.get_user_permissions(current_user['roles'])
+    }
+
+@api_router.get("/metrics")
+async def get_metrics_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+    """Get system metrics (requires admin role)"""
+    if not security_middleware.authorize_request(current_user, 'read:*'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    redis_health = redis_manager.health_check()
+    return {
+        **metrics.get_metrics(),
+        "redis": redis_health
+    }
+
+@api_router.get("/health")
+async def health_check_endpoint():
+    """Health check endpoint (public)"""
+    redis_health = redis_manager.health_check()
+    return {
+        "status": "ok",
+        "version": "1.0.0",
+        "services": ["splunk", "redis"],
+        "redis_details": redis_health
+    }
+
+@api_router.get("/redis/cache/stats")
+async def get_cache_stats(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+    """Get Redis cache statistics (requires admin role)"""
+    if not security_middleware.authorize_request(current_user, 'read:*'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    return redis_manager.get_cache_stats()
+
+@api_router.post("/redis/cache/clear")
+async def clear_cache(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+    """Clear Redis cache (requires admin role)"""
+    if not security_middleware.authorize_request(current_user, 'write:*'):
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    redis_manager.clear_cache()
+    return {"message": "Cache cleared successfully"}
+
+@api_router.get("/test-splunk-connection")
+async def test_splunk_connection_endpoint(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+    """Test Splunk connection (requires read:search permission)"""
+    if not security_middleware.authorize_request(current_user, 'read:search'):
+        raise HTTPException(status_code=403, detail="Insufficient permissions")
+    
+    try:
+        service = get_splunk_service()
+        indexes = service.indexes
+        return {
+            "connected": True,
+            "indexes_count": len([idx for idx in indexes]),
+            "splunk_version": service.info["version"]
+        }
+    except Exception as e:
+        return {
+            "connected": False,
+            "error": str(e)
+        }
+
+# Mount API router with proper path handling
+root_app.include_router(api_router, prefix="/api")
 
 # --- Main Execution ---
 if __name__ == "__main__":
