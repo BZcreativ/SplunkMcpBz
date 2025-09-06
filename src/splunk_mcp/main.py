@@ -587,7 +587,7 @@ async def refresh_token(credentials: HTTPAuthorizationCredentials = Security(sec
     return {"access_token": new_token, "token_type": "bearer"}
 
 @api_router.get("/auth/me")
-async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user_from_token)):
+async def get_current_user_info(current_user: Dict[str, Any] = Depends(get_current_user_context)):
     """Get current user information"""
     if not current_user:
         raise HTTPException(status_code=401, detail="User not authenticated")

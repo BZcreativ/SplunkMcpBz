@@ -1,0 +1,3 @@
+# Backup of original main.py before MCP routing fix
+# This file was having issues with MCP HTTP routing
+# The fix involves implementing proper JSON-RPC 2.0 compliant endpoints
